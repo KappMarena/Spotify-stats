@@ -154,15 +154,14 @@
 </head>
 <body>
 
-  <h1>🎵 Moje Spotify statistiky</h1>
+  <h1>Moje Spotify statistiky</h1>
 
   <!-- ===================== ÚVOD – jen přihlášení ===================== -->
   <div id="landing">
     <div class="hero">
-      <div class="hero-emoji">🎧</div>
       <div class="hero-title">Přihlas se a uvidíš svoje statistiky</div>
       <p class="muted">Co právě hraješ · tvoje top umělce a skladby · historie poslechu</p>
-      <button class="btn btn-spotify" id="loginBtn">▶&nbsp; Přihlásit se přes Spotify</button>
+      <button class="btn btn-spotify" id="loginBtn">Přihlásit se přes Spotify</button>
     </div>
   </div>
 
@@ -200,7 +199,7 @@
       <h2>Nahraj svůj export</h2>
       <p class="muted">Přihlášení ukáže jen posledních ~50 přehrání a top z API. Pro <b>přesné celoživotní</b> součty nahraj svůj export ze Spotify.</p>
       <div id="dropZone">
-        📥 <b>Hoď sem soubory z exportu</b> (.json) — nebo klikni a vyber
+        <b>Hoď sem soubory z exportu</b> (.json) — nebo klikni a vyber
         <input type="file" id="fileInput" accept=".json" multiple hidden>
       </div>
       <div class="howto">
@@ -224,7 +223,7 @@
     </div>
   </div>
 
-  <footer>Pokud tohle čteš, tak ti přeju krásný den ty močko 😎</footer>
+  <footer>Pokud tohle čteš, tak ti přeju krásný den ty močko</footer>
 
 <script>
 /* =====================================================================
@@ -332,10 +331,10 @@ async function loadNowPlaying(){
   const el = document.getElementById('nowPlaying');
   try{
     const d = await api('/me/player/currently-playing');
-    if(!d || !d.item){ el.innerHTML = '<span class="muted">Teď nic nehraje 🔇</span>'; return; }
+    if(!d || !d.item){ el.innerHTML = '<span class="muted">Teď nic nehraje</span>'; return; }
     const t = d.item;
     el.innerHTML = `<img src="${imgUrl(t.album.images,0)}" alt="">
-      <div><div class="muted" style="font-size:12px;">▶ Právě hraje</div>
+      <div><div class="muted" style="font-size:12px;">Právě hraje</div>
       <div style="font-size:18px; font-weight:700;">${esc(t.name)}</div>
       <div class="muted">${esc(artistsOf(t))}</div></div>`;
   }catch(e){ el.innerHTML = '<span class="muted">Nepodařilo se načíst.</span>'; }
@@ -496,7 +495,7 @@ function collapse(containerId, n){
   const btn = existing || document.createElement('button');
   btn.id = containerId+'_more'; btn.className = 'more-btn';
   if(!existing) el.after(btn);
-  const label = () => btn.textContent = expanded ? '▲ Zobrazit méně' : `▼ Zobrazit více (${rows.length-n})`;
+  const label = () => btn.textContent = expanded ? 'Zobrazit méně' : `Zobrazit více (${rows.length-n})`;
   label();
   btn.onclick = () => { expanded = !expanded; apply(); label(); };
 }
