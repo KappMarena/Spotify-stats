@@ -43,7 +43,12 @@
     position:fixed; inset:0; z-index:-1; pointer-events:none;
     background-size:cover; background-position:center;
     filter:blur(64px) saturate(170%) brightness(.5);
-    transform:scale(1.2); opacity:0; transition:opacity 1s ease;
+    opacity:0; transition:opacity 1s ease;
+    animation:kenburns 38s ease-in-out infinite alternate;  /* pomalý pohyb pozadí */
+  }
+  @keyframes kenburns{
+    0%   { transform:scale(1.2)  translate(0,0); }
+    100% { transform:scale(1.45) translate(-3%,-3%); }
   }
   .hidden{ display:none !important; }
   .muted{ color:var(--muted); }
@@ -95,7 +100,10 @@
 
   /* Main */
   .main{ grid-area:main; overflow-y:auto; padding:26px 30px; }
-  .section{ display:none; } .section.active{ display:block; }
+  .section{ display:none; }
+  .section.active{ display:block; animation:sectionIn .4s ease; }
+  @keyframes sectionIn{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes rowIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
   h1.page{ font-size:30px; font-weight:800; margin-bottom:18px; }
 
   /* Now bar */
@@ -111,7 +119,7 @@
   .nowbig img{ width:80px; height:80px; border-radius:10px; object-fit:cover; box-shadow:0 6px 18px rgba(0,0,0,.5); }
 
   /* ====== Řádky seznamů ====== */
-  .lrow{ display:flex; align-items:center; gap:13px; padding:9px 6px; border-bottom:1px solid rgba(255,255,255,.07); transition:.12s; }
+  .lrow{ display:flex; align-items:center; gap:13px; padding:9px 6px; border-bottom:1px solid rgba(255,255,255,.07); transition:.12s; animation:rowIn .45s cubic-bezier(.2,.7,.3,1) both; }
   .lrow:last-child{ border-bottom:none; }
   .lrow:hover{ background:rgba(255,255,255,.05); border-radius:9px; }
   .lrow img{ width:46px; height:46px; border-radius:7px; object-fit:cover; background:#22262e; flex:none; box-shadow:0 3px 10px rgba(0,0,0,.4); }
@@ -125,7 +133,7 @@
   .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:26px; }
 
   /* ====== Pruhové žebříčky (import) ====== */
-  .row{ display:flex; align-items:center; gap:12px; padding:9px 0; }
+  .row{ display:flex; align-items:center; gap:12px; padding:9px 0; animation:rowIn .45s cubic-bezier(.2,.7,.3,1) both; }
   .bar-wrap{ flex:1; min-width:0; }
   .bar-label{ display:flex; justify-content:space-between; gap:12px; font-size:14px; margin-bottom:4px; }
   .bar-label .name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -135,7 +143,7 @@
 
   /* Karty se souhrnem */
   .cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:8px; }
-  .card{ background:var(--tile); border:1px solid var(--brd); border-radius:12px; padding:18px; }
+  .card{ background:var(--tile); border:1px solid var(--brd); border-radius:12px; padding:18px; animation:rowIn .45s ease both; }
   .card .num{ font-size:25px; font-weight:800; background:var(--accent); -webkit-background-clip:text; background-clip:text; color:transparent; }
   .card .lbl{ color:var(--muted); font-size:13px; margin-top:3px; }
 
@@ -427,10 +435,10 @@ async function loadTops(){
 async function loadRecent(){
   const d = await api('/me/player/recently-played?limit=50');
   const items = (d?.items)||[];
-  document.getElementById('recent').innerHTML = items.map(it => {
+  document.getElementById('recent').innerHTML = items.map((it,i) => {
     const t = it.track, date = new Date(it.played_at);
     const when = date.toLocaleTimeString('cs',{hour:'2-digit',minute:'2-digit'}) + ' · ' + timeAgo(date);
-    return rowHtml(imgUrl(t.album.images,2), t.name, artistsOf(t), when);
+    return rowHtml(imgUrl(t.album.images,2), t.name, artistsOf(t), when, i);
   }).join('') || '<span class="muted">Žádná data.</span>';
 }
 
@@ -440,7 +448,7 @@ function renderTop(id, items, type){
   el.innerHTML = items.map((it,i) => {
     const img = type === 'artist' ? imgUrl(it.images,2) : imgUrl(it.album.images,2);
     const sub = type === 'artist' ? (it.genres||[]).slice(0,2).join(', ') : artistsOf(it);
-    return `<div class="lrow"><div class="rank">${i+1}</div>${rowInner(img, it.name, sub)}</div>`;
+    return `<div class="lrow" style="animation-delay:${(Math.min(i,18)*0.04).toFixed(2)}s"><div class="rank">${i+1}</div>${rowInner(img, it.name, sub)}</div>`;
   }).join('');
 }
 
@@ -522,15 +530,15 @@ function renderImport(s){
 function renderRanked(id, rows){
   const max = rows.length ? rows[0][1] : 1;
   document.getElementById(id).innerHTML = rows.map(([label,ms,count],i)=>`
-    <div class="row"><div class="rank">${i+1}</div><div class="bar-wrap">
+    <div class="row" style="animation-delay:${(Math.min(i,18)*0.04).toFixed(2)}s"><div class="rank">${i+1}</div><div class="bar-wrap">
       <div class="bar-label"><span class="name">${esc(label)}</span><span class="val">${fmtDuration(ms)}${count?` · ${count}×`:''}</span></div>
       <div class="bar"><div class="bar-fill" style="width:${(ms/max*100).toFixed(1)}%"></div></div>
     </div></div>`).join('');
 }
 function renderOrdered(id, rows){
   const max = Math.max(1, ...rows.map(r=>r[1]));
-  document.getElementById(id).innerHTML = rows.map(([label,ms])=>`
-    <div class="row"><div class="rank">${esc(label)}</div>
+  document.getElementById(id).innerHTML = rows.map(([label,ms],i)=>`
+    <div class="row" style="animation-delay:${(Math.min(i,18)*0.04).toFixed(2)}s"><div class="rank">${esc(label)}</div>
       <div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:${(ms/max*100).toFixed(1)}%"></div></div></div>
       <div class="val muted" style="width:60px; text-align:right;">${Math.round(ms/3600000)} h</div></div>`).join('');
 }
@@ -548,7 +556,7 @@ function setBackground(t){
 function imgUrl(images, idx){ if(!images||!images.length) return ''; return (images[idx]||images[images.length-1]).url; }
 function artistsOf(t){ return (t.artists||[]).map(a=>a.name).join(', '); }
 function rowInner(img,title,sub){ return `<img src="${img}" alt="" loading="lazy"><div class="ltext"><div class="ltitle">${esc(title)}</div><div class="lsub">${esc(sub)}</div></div>`; }
-function rowHtml(img,title,sub,when){ return `<div class="lrow">${rowInner(img,title,sub)}<div class="lwhen">${when}</div></div>`; }
+function rowHtml(img,title,sub,when,i){ return `<div class="lrow" style="animation-delay:${(Math.min(i||0,18)*0.04).toFixed(2)}s">${rowInner(img,title,sub)}<div class="lwhen">${when}</div></div>`; }
 function card(num,lbl){ return `<div class="card"><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`; }
 function fmtDuration(ms){ const m=Math.floor(ms/60000), d=Math.floor(m/1440), h=Math.floor(m%1440/60), mm=m%60; return d>0?`${d} d ${h} h`:h>0?`${h} h ${mm} min`:`${mm} min`; }
 function fmtDate(d){ return isNaN(d)?'?':d.toLocaleDateString('cs',{day:'numeric',month:'numeric',year:'numeric'}); }
