@@ -28,7 +28,7 @@
   }
   /* barevné plovoucí "blobs" – prosvítají skrz sklo */
   body::before, body::after{
-    content:''; position:fixed; border-radius:50%; filter:blur(90px); z-index:-1; pointer-events:none;
+    content:''; position:fixed; border-radius:50%; filter:blur(90px); z-index:-2; pointer-events:none;
   }
   body::before{ width:62vmax; height:62vmax; top:-18vmax; left:-14vmax;
     background:radial-gradient(circle, rgba(29,185,84,.55), transparent 70%);
@@ -38,6 +38,13 @@
     animation:floatB 27s ease-in-out infinite; }
   @keyframes floatA{ 50%{ transform:translate(10vmax,8vmax) scale(1.15); } }
   @keyframes floatB{ 50%{ transform:translate(-8vmax,-10vmax) scale(1.10); } }
+  /* rozmazaný obal právě hrané skladby na pozadí (když nic nehraje, je průhledný a prosvítají barvy) */
+  #bgImage{
+    position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background-size:cover; background-position:center;
+    filter:blur(64px) saturate(170%) brightness(.5);
+    transform:scale(1.2); opacity:0; transition:opacity 1s ease;
+  }
   .hidden{ display:none !important; }
   .muted{ color:var(--muted); }
   a{ color:var(--green); text-decoration:none; } a:hover{ text-decoration:underline; }
@@ -165,6 +172,8 @@
 </style>
 </head>
 <body>
+
+  <div id="bgImage"></div>
 
   <!-- ===================== ÚVOD ===================== -->
   <div id="landing">
@@ -387,6 +396,7 @@ async function loadLive(){
 async function loadNowPlaying(){
   let t = null;
   try{ const d = await api('/me/player/currently-playing'); t = (d && d.item) ? d.item : null; }catch(e){}
+  setBackground(t);
   const big = document.getElementById('nowBig'), mini = document.getElementById('nowMini');
   if(!t){
     big.innerHTML = '<span class="muted">Teď nic nehraje</span>';
@@ -528,6 +538,13 @@ function renderOrdered(id, rows){
 /* =====================================================================
    5) POMOCNÉ FUNKCE
    ===================================================================== */
+// Nastaví rozmazaný obal na pozadí; bez skladby pozadí schová (prosvítají barvy)
+function setBackground(t){
+  const bg = document.getElementById('bgImage');
+  const url = t ? imgUrl(t.album.images, 0) : '';
+  if(url){ bg.style.backgroundImage = 'url("' + url + '")'; bg.style.opacity = '1'; }
+  else { bg.style.opacity = '0'; }
+}
 function imgUrl(images, idx){ if(!images||!images.length) return ''; return (images[idx]||images[images.length-1]).url; }
 function artistsOf(t){ return (t.artists||[]).map(a=>a.name).join(', '); }
 function rowInner(img,title,sub){ return `<img src="${img}" alt="" loading="lazy"><div class="ltext"><div class="ltitle">${esc(title)}</div><div class="lsub">${esc(sub)}</div></div>`; }
