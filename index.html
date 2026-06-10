@@ -122,6 +122,7 @@
   .lrow{ display:flex; align-items:center; gap:13px; padding:9px 6px; border-bottom:1px solid rgba(255,255,255,.07); transition:.12s; animation:rowIn .45s cubic-bezier(.2,.7,.3,1) both; }
   .lrow:last-child{ border-bottom:none; }
   .lrow:hover{ background:rgba(255,255,255,.05); border-radius:9px; }
+  .lrow[data-url]{ cursor:pointer; }
   .lrow img{ width:46px; height:46px; border-radius:7px; object-fit:cover; background:#22262e; flex:none; box-shadow:0 3px 10px rgba(0,0,0,.4); }
   .rank{ width:26px; text-align:center; font-weight:800; color:var(--muted); font-variant-numeric:tabular-nums; flex:none; }
   .ltext{ min-width:0; flex:1; }
@@ -201,6 +202,7 @@
       <div class="navlink active" data-nav="prehled">Přehled</div>
       <div class="navlink" data-nav="artists">Top umělci</div>
       <div class="navlink" data-nav="tracks">Top skladby</div>
+      <div class="navlink" data-nav="genres">Žánry</div>
       <div class="navlink" data-nav="recent">Naposledy přehrané</div>
       <div class="navlink" data-nav="import">Přesná historie</div>
       <div class="sidebar-spacer"></div>
@@ -213,7 +215,10 @@
 
       <!-- Přehled -->
       <section id="sec-prehled" class="section active">
-        <h1 class="page">Přehled</h1>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
+          <h1 class="page" style="margin:0;">Přehled</h1>
+          <button class="btn" id="shareBtn" style="padding:10px 18px; font-size:14px;">Sdílet kartu</button>
+        </div>
         <h2>Právě hraje</h2>
         <div id="nowBig" class="nowbig"><span class="muted">Načítám…</span></div>
 
@@ -232,6 +237,9 @@
             <div id="prevTracks"></div>
           </div>
         </div>
+
+        <h2 style="margin-top:28px;">Kdy nejvíc posloucháš <span class="muted" style="text-transform:none; letter-spacing:0;">(z posledních přehrání)</span></h2>
+        <div id="byHourLive"></div>
       </section>
 
       <!-- Top umělci -->
@@ -254,6 +262,13 @@
           <div class="chip" data-r="long_term">Celá doba</div>
         </div>
         <div id="topTracks"></div>
+      </section>
+
+      <!-- Žánry -->
+      <section id="sec-genres" class="section">
+        <h1 class="page">Žánry</h1>
+        <p class="muted" style="margin-bottom:14px;">Z tvých top umělců — čím výš umělec, tím větší váha žánru.</p>
+        <div id="genres"></div>
       </section>
 
       <!-- Naposledy přehrané -->
@@ -426,10 +441,12 @@ async function loadTops(){
     api('/me/top/tracks?limit=50&time_range='  + currentRange),
   ]);
   const artists = (a?.items)||[], tracks = (t?.items)||[];
+  window._artists = artists; window._tracks = tracks;   // pro sdílecí kartičku
   renderTop('topArtists', artists, 'artist');
   renderTop('topTracks',  tracks,  'track');
   renderTop('prevArtists', artists.slice(0,5), 'artist');
   renderTop('prevTracks',  tracks.slice(0,5),  'track');
+  renderGenres(artists);
 }
 
 async function loadRecent(){
@@ -438,8 +455,17 @@ async function loadRecent(){
   document.getElementById('recent').innerHTML = items.map((it,i) => {
     const t = it.track, date = new Date(it.played_at);
     const when = date.toLocaleTimeString('cs',{hour:'2-digit',minute:'2-digit'}) + ' · ' + timeAgo(date);
-    return rowHtml(imgUrl(t.album.images,2), t.name, artistsOf(t), when, i);
+    return rowHtml(imgUrl(t.album.images,2), t.name, artistsOf(t), when, i, (t.external_urls&&t.external_urls.spotify)||'');
   }).join('') || '<span class="muted">Žádná data.</span>';
+
+  // Kdy posloucháš – z posledních přehrání podle hodiny dne
+  const hours = new Array(24).fill(0);
+  items.forEach(it => { hours[new Date(it.played_at).getHours()]++; });
+  const mx = Math.max(1, ...hours);
+  document.getElementById('byHourLive').innerHTML = hours.map((c,h)=>`
+    <div class="row" style="animation-delay:${(Math.min(h,18)*0.03).toFixed(2)}s"><div class="rank">${h}</div>
+    <div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:${(c/mx*100).toFixed(1)}%"></div></div></div>
+    <div class="val muted" style="width:44px; text-align:right;">${c}×</div></div>`).join('');
 }
 
 function renderTop(id, items, type){
@@ -448,7 +474,7 @@ function renderTop(id, items, type){
   el.innerHTML = items.map((it,i) => {
     const img = type === 'artist' ? imgUrl(it.images,2) : imgUrl(it.album.images,2);
     const sub = type === 'artist' ? (it.genres||[]).slice(0,2).join(', ') : artistsOf(it);
-    return `<div class="lrow" style="animation-delay:${(Math.min(i,18)*0.04).toFixed(2)}s"><div class="rank">${i+1}</div>${rowInner(img, it.name, sub)}</div>`;
+    return `<div class="lrow" data-url="${(it.external_urls&&it.external_urls.spotify)||''}" style="animation-delay:${(Math.min(i,18)*0.04).toFixed(2)}s"><div class="rank">${i+1}</div>${rowInner(img, it.name, sub)}</div>`;
   }).join('');
 }
 
@@ -459,6 +485,55 @@ function setRange(r){
   loadTops();
 }
 document.addEventListener('click', e => { const c = e.target.closest('.rangeChips .chip'); if(c) setRange(c.dataset.r); });
+
+// Klik na řádek otevře skladbu/umělce ve Spotify
+document.addEventListener('click', e => {
+  const row = e.target.closest('.lrow[data-url]');
+  if(row && row.dataset.url) window.open(row.dataset.url, '_blank', 'noopener');
+});
+
+// Žánry z top umělců (čím výš umělec, tím větší váha)
+function renderGenres(artists){
+  const map = new Map();
+  artists.forEach((a, idx) => { const w = 50 - idx; (a.genres||[]).forEach(g => map.set(g, (map.get(g)||0) + w)); });
+  const rows = [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const el = document.getElementById('genres'); if(!el) return;
+  if(!rows.length){ el.innerHTML = '<span class="muted">Spotify pro tyto umělce neuvádí žánry.</span>'; return; }
+  const max = rows[0][1];
+  el.innerHTML = rows.map(([g,v],i)=>`
+    <div class="row" style="animation-delay:${(Math.min(i,18)*0.04).toFixed(2)}s">
+      <div class="bar-wrap"><div class="bar-label"><span class="name">${esc(g)}</span></div>
+      <div class="bar"><div class="bar-fill" style="width:${(v/max*100).toFixed(1)}%"></div></div></div>
+    </div>`).join('');
+}
+
+// Sdílecí kartička (PNG ke stažení) z aktuálního top 5
+function clip(s,n){ return s.length>n ? s.slice(0,n-1)+'…' : s; }
+function generateShareCard(){
+  const artists = (window._artists||[]).slice(0,5);
+  const tracks  = (window._tracks||[]).slice(0,5);
+  if(!artists.length && !tracks.length){ alert('Počkej, až se načtou data.'); return; }
+  const W=1080, H=1920, c=document.createElement('canvas'); c.width=W; c.height=H;
+  const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,'#0b3d1f'); g.addColorStop(.5,'#0a0d16'); g.addColorStop(1,'#1d1147');
+  x.fillStyle=g; x.fillRect(0,0,W,H);
+  x.fillStyle='rgba(30,215,96,.22)'; x.beginPath(); x.arc(W*0.82,200,260,0,7); x.fill();
+  x.textBaseline='top';
+  x.fillStyle='#fff';    x.font='800 70px Segoe UI, Arial, sans-serif'; x.fillText('Moje Spotify', 80, 120);
+  x.fillStyle='#1ed760'; x.fillText('TOP', 80, 206);
+  const rl={short_term:'Poslední 4 týdny',medium_term:'Posledních 6 měsíců',long_term:'Celá doba'}[currentRange]||'';
+  x.fillStyle='#aab3c0'; x.font='400 36px Segoe UI, Arial, sans-serif'; x.fillText(rl, 82, 312);
+  let y=440;
+  x.fillStyle='#1ed760'; x.font='700 40px Segoe UI, Arial'; x.fillText('Umělci', 80, y); y+=78;
+  artists.forEach((a,i)=>{ x.font='600 46px Segoe UI, Arial'; x.fillStyle='#1ed760'; x.fillText((i+1)+'.', 80, y); x.fillStyle='#fff'; x.fillText(clip(a.name,24), 168, y); y+=70; });
+  y+=46;
+  x.fillStyle='#1ed760'; x.font='700 40px Segoe UI, Arial'; x.fillText('Skladby', 80, y); y+=78;
+  tracks.forEach((t,i)=>{ x.font='600 42px Segoe UI, Arial'; x.fillStyle='#1ed760'; x.fillText((i+1)+'.', 80, y); x.fillStyle='#fff'; x.fillText(clip(t.name,26), 168, y); y+=64; });
+  x.fillStyle='#8b94a3'; x.font='400 30px Segoe UI, Arial'; x.fillText('vygenerováno mojí Spotify statistikou', 80, H-100);
+  const a=document.createElement('a'); a.download='spotify-top.png'; a.href=c.toDataURL('image/png'); a.click();
+}
+document.getElementById('shareBtn').addEventListener('click', generateShareCard);
 
 /* =====================================================================
    4) IMPORT EXPORTU – přesná historie
@@ -556,7 +631,7 @@ function setBackground(t){
 function imgUrl(images, idx){ if(!images||!images.length) return ''; return (images[idx]||images[images.length-1]).url; }
 function artistsOf(t){ return (t.artists||[]).map(a=>a.name).join(', '); }
 function rowInner(img,title,sub){ return `<img src="${img}" alt="" loading="lazy"><div class="ltext"><div class="ltitle">${esc(title)}</div><div class="lsub">${esc(sub)}</div></div>`; }
-function rowHtml(img,title,sub,when,i){ return `<div class="lrow" style="animation-delay:${(Math.min(i||0,18)*0.04).toFixed(2)}s">${rowInner(img,title,sub)}<div class="lwhen">${when}</div></div>`; }
+function rowHtml(img,title,sub,when,i,url){ return `<div class="lrow" data-url="${url||''}" style="animation-delay:${(Math.min(i||0,18)*0.04).toFixed(2)}s">${rowInner(img,title,sub)}<div class="lwhen">${when}</div></div>`; }
 function card(num,lbl){ return `<div class="card"><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`; }
 function fmtDuration(ms){ const m=Math.floor(ms/60000), d=Math.floor(m/1440), h=Math.floor(m%1440/60), mm=m%60; return d>0?`${d} d ${h} h`:h>0?`${h} h ${mm} min`:`${mm} min`; }
 function fmtDate(d){ return isNaN(d)?'?':d.toLocaleDateString('cs',{day:'numeric',month:'numeric',year:'numeric'}); }
