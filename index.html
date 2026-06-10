@@ -5,120 +5,105 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Moje Spotify statistiky</title>
 <style>
-  /* ====== Glass / moderní téma ====== */
+  /* ====== Základ ====== */
   :root{
-    --text:#eef2f7; --muted:#9aa6b8;
-    --glass:rgba(255,255,255,.055);
-    --glass-strong:rgba(255,255,255,.09);
-    --brd:rgba(255,255,255,.12);
+    --text:#ffffff; --muted:#aab3c0;
+    --panel:rgba(20,23,30,.55);          /* hlavní obsah – tmavší sklo = čitelné */
+    --panel-strong:rgba(13,15,20,.72);   /* sidebar / lišta */
+    --tile:rgba(255,255,255,.06);        /* vnitřní dlaždice */
+    --brd:rgba(255,255,255,.10);
     --green:#1ed760; --cyan:#22d3ee;
     --accent:linear-gradient(135deg,#1ed760,#22d3ee);
-    --radius:18px;
-    --shadow:0 10px 34px rgba(0,0,0,.40);
+    --radius:14px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
-  html{background:#070a0f;}
+  html,body{height:100%;}
   body{
-    color:var(--text); position:relative; min-height:100vh; overflow-x:hidden;
+    color:var(--text); overflow:hidden;
     font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;
-    line-height:1.55; padding:30px 22px 60px; max-width:920px; margin:0 auto;
     background:
-      radial-gradient(900px 620px at 8% -8%, rgba(29,185,84,.18), transparent 60%),
-      radial-gradient(820px 600px at 112% 4%, rgba(124,58,237,.16), transparent 55%),
-      #070a0f;
-    background-attachment:fixed;
+      radial-gradient(1200px 820px at 10% -12%, rgba(29,185,84,.20), transparent 55%),
+      radial-gradient(1000px 760px at 112% 0%, rgba(124,58,237,.18), transparent 55%),
+      #0a0d12;
   }
-  /* plovoucí rozmazané "blobs" v pozadí */
-  body::before, body::after{
-    content:''; position:fixed; width:46vmax; height:46vmax; border-radius:50%;
-    filter:blur(90px); opacity:.45; z-index:-1; pointer-events:none;
-  }
-  body::before{ background:#1DB954; top:-14vmax; left:-12vmax; animation:floatA 20s ease-in-out infinite; }
-  body::after { background:#6d28d9; bottom:-16vmax; right:-14vmax; animation:floatB 26s ease-in-out infinite; }
-  @keyframes floatA{ 50%{ transform:translate(7vmax,5vmax) scale(1.12); } }
-  @keyframes floatB{ 50%{ transform:translate(-6vmax,-7vmax) scale(1.08); } }
+  .hidden{ display:none !important; }
+  .muted{ color:var(--muted); }
+  a{ color:var(--green); text-decoration:none; } a:hover{ text-decoration:underline; }
 
-  h1{ font-size:28px; font-weight:800; letter-spacing:-.3px; margin-bottom:14px; }
-  h2{
-    font-size:15px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px;
-    color:#cfd6e2; margin:28px 0 12px; display:flex; align-items:center; gap:9px;
-  }
-  h2::before{ content:''; width:9px; height:9px; border-radius:50%; background:var(--accent); box-shadow:0 0 12px rgba(34,211,238,.6); }
-  .muted{ color:var(--muted); font-size:14px; }
-  a{ color:var(--green); text-decoration:none; }
-  a:hover{ text-decoration:underline; }
+  h2{ font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.3px; color:var(--muted); margin:0 0 12px; }
+  .section > h2:not(:first-child){ margin-top:28px; }
 
-  /* ====== Skleněné panely ====== */
-  .card, #nowPlaying, .howto,
-  #topArtists, #topTracks, #recent,
-  #impArtists, #impTracks, #impAlbums, #byYear, #byHour{
-    background:var(--glass);
-    -webkit-backdrop-filter:blur(20px) saturate(150%);
-    backdrop-filter:blur(20px) saturate(150%);
-    border:1px solid var(--brd);
-    border-radius:var(--radius);
-    box-shadow:var(--shadow);
+  /* ====== Úvod (přihlášení) ====== */
+  #landing{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .hero{
+    text-align:center; max-width:460px; width:100%; padding:48px 30px;
+    background:var(--panel); border:1px solid var(--brd); border-radius:22px;
+    -webkit-backdrop-filter:blur(22px) saturate(150%); backdrop-filter:blur(22px) saturate(150%);
+    box-shadow:0 18px 50px rgba(0,0,0,.5);
   }
-  #topArtists, #topTracks, #recent,
-  #impArtists, #impTracks, #impAlbums, #byYear, #byHour{ padding:6px 18px; }
-
-  /* ====== Tlačítka ====== */
+  .hero-title{ font-size:24px; font-weight:800; margin-bottom:8px; }
   .btn{
-    display:inline-flex; align-items:center; gap:8px; border:none; cursor:pointer;
-    font-size:15px; font-weight:700; padding:13px 24px; border-radius:30px;
-    transition:transform .15s, box-shadow .15s, filter .15s;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px; border:none; cursor:pointer;
+    font-size:15px; font-weight:700; padding:14px 26px; border-radius:30px; color:#04240f;
+    background:var(--accent); box-shadow:0 8px 24px rgba(30,215,96,.35); transition:transform .15s, box-shadow .15s;
   }
-  .btn-spotify{ background:var(--accent); color:#04240f; box-shadow:0 8px 24px rgba(30,215,96,.35); }
-  .btn-spotify:hover{ transform:translateY(-2px); box-shadow:0 12px 30px rgba(30,215,96,.5); }
-  .btn-ghost{
-    background:var(--glass-strong); color:var(--text); border:1px solid var(--brd);
-    padding:9px 16px; border-radius:24px; font-size:14px; cursor:pointer;
-    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); transition:.15s;
-  }
-  .btn-ghost:hover{ border-color:var(--green); color:#fff; }
-
-  /* ====== Hero (úvod) ====== */
-  .hero{ text-align:center; margin-top:34px; padding:50px 26px; background:var(--glass); border:1px solid var(--brd); border-radius:24px; -webkit-backdrop-filter:blur(22px) saturate(150%); backdrop-filter:blur(22px) saturate(150%); box-shadow:var(--shadow); }
-  .hero-emoji{ font-size:58px; line-height:1; margin-bottom:14px; }
-  .hero-title{ font-size:23px; font-weight:800; letter-spacing:-.2px; margin-bottom:8px; }
+  .btn:hover{ transform:translateY(-2px); box-shadow:0 12px 30px rgba(30,215,96,.5); }
   .hero .btn{ margin-top:22px; }
 
-  /* ====== Záložky ====== */
-  .tabs{ display:flex; gap:8px; margin:20px 0 6px; }
-  .tab{ padding:9px 20px; border-radius:22px; cursor:pointer; color:var(--muted); font-weight:600; font-size:14px; border:1px solid transparent; transition:.15s; }
-  .tab:hover{ color:#fff; }
-  .tab.active{ background:var(--glass-strong); border-color:var(--brd); color:#fff; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
-
-  /* ====== Drop zóna ====== */
-  #dropZone{
-    border:2px dashed rgba(255,255,255,.18); border-radius:var(--radius);
-    padding:36px 20px; text-align:center; cursor:pointer; margin-top:14px;
-    background:var(--glass); transition:.18s;
+  /* ====== Shell (celá obrazovka, jako appka) ====== */
+  #shell{
+    display:grid; height:100vh; gap:12px; padding:12px;
+    grid-template-columns:240px 1fr;
+    grid-template-rows:1fr 86px;
+    grid-template-areas:"sidebar main" "nowbar nowbar";
   }
-  #dropZone.hover{ border-color:var(--green); background:rgba(30,215,96,.10); transform:scale(1.01); }
-  .howto{ padding:16px 22px; margin-top:18px; }
-  .howto ol{ margin-left:18px; } .howto li{ margin:6px 0; }
-
-  /* ====== Souhrnné karty ====== */
-  .cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-top:8px; }
-  .card{ padding:18px; transition:transform .15s, border-color .15s; }
-  .card:hover{ transform:translateY(-3px); border-color:rgba(34,211,238,.45); }
-  .card .num{
-    font-size:26px; font-weight:800; line-height:1.15;
-    background:var(--accent); -webkit-background-clip:text; background-clip:text; color:transparent;
+  .glass{
+    background:var(--panel); border:1px solid var(--brd); border-radius:var(--radius);
+    -webkit-backdrop-filter:blur(20px) saturate(150%); backdrop-filter:blur(20px) saturate(150%);
   }
-  .card .lbl{ color:var(--muted); font-size:13px; margin-top:3px; }
 
-  /* ====== Řádky žebříčků s obrázky ====== */
-  .lrow{ display:flex; align-items:center; gap:13px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.07); transition:.12s; }
+  /* Sidebar */
+  .sidebar{ grid-area:sidebar; background:var(--panel-strong); border:1px solid var(--brd); border-radius:var(--radius);
+    -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px);
+    padding:16px 12px; display:flex; flex-direction:column; gap:4px; overflow:auto; }
+  .brand{ font-weight:800; font-size:16px; padding:6px 12px 16px; }
+  .navlink{ display:flex; align-items:center; padding:11px 14px; border-radius:10px; color:var(--muted);
+    cursor:pointer; font-weight:600; font-size:14px; transition:.12s; white-space:nowrap; }
+  .navlink:hover{ color:#fff; background:rgba(255,255,255,.06); }
+  .navlink.active{ color:#fff; background:rgba(255,255,255,.12); }
+  .sidebar-spacer{ flex:1; min-height:10px; }
+  .user{ font-size:12px; color:var(--muted); padding:6px 14px; }
+
+  /* Main */
+  .main{ grid-area:main; overflow-y:auto; padding:26px 30px; }
+  .section{ display:none; } .section.active{ display:block; }
+  h1.page{ font-size:30px; font-weight:800; margin-bottom:18px; }
+
+  /* Now bar */
+  .nowbar{ grid-area:nowbar; background:var(--panel-strong); border:1px solid var(--brd); border-radius:var(--radius);
+    -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px);
+    display:flex; align-items:center; gap:14px; padding:0 20px; }
+  .nowbar img{ width:58px; height:58px; border-radius:8px; object-fit:cover; box-shadow:0 4px 12px rgba(0,0,0,.5); }
+  .nowbar .ltext{ min-width:0; }
+
+  /* Velké "právě hraje" v přehledu */
+  .nowbig{ display:flex; align-items:center; gap:16px; background:var(--tile); border:1px solid var(--brd);
+    border-radius:12px; padding:16px; min-height:96px; }
+  .nowbig img{ width:80px; height:80px; border-radius:10px; object-fit:cover; box-shadow:0 6px 18px rgba(0,0,0,.5); }
+
+  /* ====== Řádky seznamů ====== */
+  .lrow{ display:flex; align-items:center; gap:13px; padding:9px 6px; border-bottom:1px solid rgba(255,255,255,.07); transition:.12s; }
   .lrow:last-child{ border-bottom:none; }
-  .lrow:hover{ background:rgba(255,255,255,.03); border-radius:10px; }
-  .lrow img{ width:46px; height:46px; border-radius:8px; object-fit:cover; background:#22262e; flex:none; box-shadow:0 3px 10px rgba(0,0,0,.4); }
-  .rank{ width:24px; text-align:center; font-weight:800; color:var(--muted); font-variant-numeric:tabular-nums; flex:none; }
+  .lrow:hover{ background:rgba(255,255,255,.05); border-radius:9px; }
+  .lrow img{ width:46px; height:46px; border-radius:7px; object-fit:cover; background:#22262e; flex:none; box-shadow:0 3px 10px rgba(0,0,0,.4); }
+  .rank{ width:26px; text-align:center; font-weight:800; color:var(--muted); font-variant-numeric:tabular-nums; flex:none; }
   .ltext{ min-width:0; flex:1; }
   .ltitle{ font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .lsub{ color:var(--muted); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .lwhen{ color:var(--muted); font-size:12px; white-space:nowrap; flex:none; text-align:right; }
+
+  /* Dvě kolony v přehledu */
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:26px; }
 
   /* ====== Pruhové žebříčky (import) ====== */
   .row{ display:flex; align-items:center; gap:12px; padding:9px 0; }
@@ -126,227 +111,295 @@
   .bar-label{ display:flex; justify-content:space-between; gap:12px; font-size:14px; margin-bottom:4px; }
   .bar-label .name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .bar-label .val{ color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums; }
-  .bar{ height:9px; background:rgba(255,255,255,.08); border-radius:5px; overflow:hidden; }
-  .bar-fill{ height:100%; background:var(--accent); border-radius:5px; box-shadow:0 0 12px rgba(30,215,96,.4); }
+  .bar{ height:9px; background:rgba(255,255,255,.10); border-radius:5px; overflow:hidden; }
+  .bar-fill{ height:100%; background:var(--accent); border-radius:5px; }
 
-  /* ====== Právě hraje ====== */
-  #nowPlaying{ display:flex; align-items:center; gap:15px; padding:16px; margin-top:8px; min-height:80px; }
-  #nowPlaying img{ width:60px; height:60px; border-radius:10px; object-fit:cover; box-shadow:0 6px 18px rgba(0,0,0,.5); }
+  /* Karty se souhrnem */
+  .cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:8px; }
+  .card{ background:var(--tile); border:1px solid var(--brd); border-radius:12px; padding:18px; }
+  .card .num{ font-size:25px; font-weight:800; background:var(--accent); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .card .lbl{ color:var(--muted); font-size:13px; margin-top:3px; }
 
-  /* ====== Přepínač období ====== */
-  .chips{ display:flex; gap:9px; flex-wrap:wrap; margin-top:10px; }
-  .chip{
-    background:var(--glass-strong); color:var(--muted); border:1px solid var(--brd);
-    padding:7px 16px; border-radius:22px; cursor:pointer; font-size:14px; transition:.15s;
-    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  /* Přepínač období */
+  .chips{ display:flex; gap:9px; flex-wrap:wrap; margin:0 0 14px; }
+  .chip{ background:var(--tile); color:var(--muted); border:1px solid var(--brd); padding:7px 16px; border-radius:22px; cursor:pointer; font-size:14px; transition:.15s; }
+  .chip:hover{ color:#fff; }
+  .chip.active{ background:var(--accent); color:#04240f; border-color:transparent; font-weight:700; }
+
+  /* Drop zóna + návod */
+  #dropZone{ border:2px dashed rgba(255,255,255,.20); border-radius:12px; padding:34px 20px; text-align:center; cursor:pointer; background:var(--tile); transition:.18s; }
+  #dropZone.hover{ border-color:var(--green); background:rgba(30,215,96,.10); }
+  .howto{ background:var(--tile); border:1px solid var(--brd); border-radius:12px; padding:16px 22px; margin-top:16px; }
+  .howto ol{ margin-left:18px; } .howto li{ margin:6px 0; }
+
+  /* ====== Mobil ====== */
+  @media (max-width:780px){
+    body{ overflow:auto; }
+    #shell{
+      height:auto; min-height:100vh; gap:8px; padding:8px;
+      grid-template-columns:1fr;
+      grid-template-rows:auto 1fr auto;
+      grid-template-areas:"sidebar" "main" "nowbar";
+    }
+    .sidebar{ flex-direction:row; align-items:center; overflow-x:auto; overflow-y:hidden; padding:8px; gap:4px; position:sticky; top:0; z-index:5; }
+    .brand, .sidebar-spacer, .user{ display:none; }
+    .navlink{ padding:9px 14px; }
+    .main{ padding:18px 16px; }
+    .nowbar{ position:sticky; bottom:0; z-index:5; padding:0 14px; }
+    .nowbar img{ width:48px; height:48px; }
+    .grid2{ grid-template-columns:1fr; gap:8px; }
+    h1.page{ font-size:24px; }
   }
-  .chip:hover{ color:#fff; border-color:rgba(255,255,255,.3); }
-  .chip.active{ background:var(--accent); color:#04240f; border-color:transparent; font-weight:700; box-shadow:0 6px 18px rgba(30,215,96,.3); }
-
-  /* ====== Tlačítko Zobrazit více ====== */
-  .more-btn{ display:block; margin:12px auto 2px; background:var(--glass-strong); color:var(--text); border:1px solid var(--brd); padding:8px 20px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:600; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); transition:.15s; }
-  .more-btn:hover{ border-color:var(--green); color:#fff; }
-
-  .topbar{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:8px; }
-  .hidden{ display:none; }
-  footer{ margin-top:46px; color:var(--muted); font-size:12px; text-align:center; }
 </style>
 </head>
 <body>
 
-  <h1>Moje Spotify statistiky</h1>
-
-  <!-- ===================== ÚVOD – jen přihlášení ===================== -->
+  <!-- ===================== ÚVOD ===================== -->
   <div id="landing">
     <div class="hero">
-      <div class="hero-title">Přihlas se a uvidíš svoje statistiky</div>
-      <p class="muted">Co právě hraješ · tvoje top umělce a skladby · historie poslechu</p>
-      <button class="btn btn-spotify" id="loginBtn">Přihlásit se přes Spotify</button>
+      <div class="hero-title">Moje Spotify statistiky</div>
+      <p class="muted">Přihlas se a uvidíš, co právě hraješ, svoje top umělce a skladby i historii poslechu.</p>
+      <button class="btn" id="loginBtn">Přihlásit se přes Spotify</button>
     </div>
   </div>
 
-  <!-- ===================== APLIKACE – po přihlášení ===================== -->
-  <div id="app" class="hidden">
-    <div class="topbar">
-      <div id="hello" class="muted"></div>
-      <button class="btn-ghost" id="logoutBtn">Odhlásit</button>
+  <!-- ===================== APLIKACE ===================== -->
+  <div id="shell" class="hidden">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="brand">Spotify statistiky</div>
+      <div class="navlink active" data-nav="prehled">Přehled</div>
+      <div class="navlink" data-nav="artists">Top umělci</div>
+      <div class="navlink" data-nav="tracks">Top skladby</div>
+      <div class="navlink" data-nav="recent">Naposledy přehrané</div>
+      <div class="navlink" data-nav="import">Přesná historie</div>
+      <div class="sidebar-spacer"></div>
+      <div class="user">Přihlášen: <span id="userName">…</span></div>
+      <div class="navlink" data-action="logout">Odhlásit</div>
+    </nav>
+
+    <!-- Hlavní obsah -->
+    <main class="main glass">
+
+      <!-- Přehled -->
+      <section id="sec-prehled" class="section active">
+        <h1 class="page">Přehled</h1>
+        <h2>Právě hraje</h2>
+        <div id="nowBig" class="nowbig"><span class="muted">Načítám…</span></div>
+
+        <div class="grid2">
+          <div>
+            <h2>Top umělci <span class="muted" style="text-transform:none; letter-spacing:0;">(náhled)</span></h2>
+            <div class="chips rangeChips">
+              <div class="chip" data-r="short_term">4 týdny</div>
+              <div class="chip active" data-r="medium_term">6 měsíců</div>
+              <div class="chip" data-r="long_term">Celá doba</div>
+            </div>
+            <div id="prevArtists"></div>
+          </div>
+          <div>
+            <h2>Top skladby <span class="muted" style="text-transform:none; letter-spacing:0;">(náhled)</span></h2>
+            <div id="prevTracks"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Top umělci -->
+      <section id="sec-artists" class="section">
+        <h1 class="page">Top umělci</h1>
+        <div class="chips rangeChips">
+          <div class="chip" data-r="short_term">4 týdny</div>
+          <div class="chip active" data-r="medium_term">6 měsíců</div>
+          <div class="chip" data-r="long_term">Celá doba</div>
+        </div>
+        <div id="topArtists"></div>
+      </section>
+
+      <!-- Top skladby -->
+      <section id="sec-tracks" class="section">
+        <h1 class="page">Top skladby</h1>
+        <div class="chips rangeChips">
+          <div class="chip" data-r="short_term">4 týdny</div>
+          <div class="chip active" data-r="medium_term">6 měsíců</div>
+          <div class="chip" data-r="long_term">Celá doba</div>
+        </div>
+        <div id="topTracks"></div>
+      </section>
+
+      <!-- Naposledy přehrané -->
+      <section id="sec-recent" class="section">
+        <h1 class="page">Naposledy přehrané</h1>
+        <div id="recent"></div>
+      </section>
+
+      <!-- Přesná historie (import) -->
+      <section id="sec-import" class="section">
+        <h1 class="page">Přesná historie</h1>
+        <p class="muted" style="margin-bottom:14px;">Přihlášení ukáže jen posledních ~50 přehrání a top z API. Pro přesné celoživotní součty nahraj svůj export ze Spotify.</p>
+        <div id="dropZone">
+          <b>Hoď sem soubory z exportu</b> (.json) — nebo klikni a vyber
+          <input type="file" id="fileInput" accept=".json" multiple hidden>
+        </div>
+        <div class="howto">
+          <b>Jak získat export:</b>
+          <ol>
+            <li><a href="https://www.spotify.com/account/privacy/" target="_blank" rel="noopener">Účet → Soukromí</a> → „Rozšířená historie streamování" → Požádat o data</li>
+            <li>Přijde e-mailem (~měsíc), stáhni ZIP, rozbal a soubory <code>Streaming_History_Audio_*.json</code> hoď sem.</li>
+          </ol>
+        </div>
+
+        <div id="importResult" class="hidden">
+          <h2 style="margin-top:26px;">Souhrn</h2>
+          <p class="muted" id="range" style="margin-bottom:10px;"></p>
+          <div class="cards" id="cards"></div>
+          <h2 style="margin-top:24px;">Top umělci</h2>  <div id="impArtists"></div>
+          <h2 style="margin-top:24px;">Top skladby</h2> <div id="impTracks"></div>
+          <h2 style="margin-top:24px;">Top alba</h2>    <div id="impAlbums"></div>
+          <h2 style="margin-top:24px;">Poslech podle roku</h2>       <div id="byYear"></div>
+          <h2 style="margin-top:24px;">Poslech podle hodiny dne</h2> <div id="byHour"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Lišta dole: právě hraje -->
+    <div class="nowbar">
+      <div id="nowMini" style="display:flex; align-items:center; gap:14px; min-width:0;">
+        <span class="muted">Nic nehraje</span>
+      </div>
     </div>
 
-    <div class="tabs">
-      <div class="tab active" data-t="overview">Přehled</div>
-      <div class="tab" data-t="import">Přesná historie</div>
-    </div>
-
-    <!-- ZÁLOŽKA: Přehled (živá data z API) -->
-    <div id="tabOverview">
-      <h2>Právě hraje</h2>
-      <div id="nowPlaying"><span class="muted">Načítám…</span></div>
-
-      <h2 style="margin-top:26px;">Tvoje top</h2>
-      <div class="chips" id="rangeChips">
-        <div class="chip" data-r="short_term">4 týdny</div>
-        <div class="chip active" data-r="medium_term">6 měsíců</div>
-        <div class="chip" data-r="long_term">Celá doba</div>
-      </div>
-
-      <h2>Top umělci</h2>  <div id="topArtists"></div>
-      <h2>Top skladby</h2> <div id="topTracks"></div>
-      <h2>Naposledy přehrané</h2> <div id="recent"></div>
-    </div>
-
-    <!-- ZÁLOŽKA: Přesná historie (import exportu) -->
-    <div id="tabImport" class="hidden">
-      <h2>Nahraj svůj export</h2>
-      <p class="muted">Přihlášení ukáže jen posledních ~50 přehrání a top z API. Pro <b>přesné celoživotní</b> součty nahraj svůj export ze Spotify.</p>
-      <div id="dropZone">
-        <b>Hoď sem soubory z exportu</b> (.json) — nebo klikni a vyber
-        <input type="file" id="fileInput" accept=".json" multiple hidden>
-      </div>
-      <div class="howto">
-        <b>Jak získat export:</b>
-        <ol>
-          <li><a href="https://www.spotify.com/account/privacy/" target="_blank" rel="noopener">Účet → Soukromí</a> → „Rozšířená historie streamování" → Požádat o data</li>
-          <li>Přijde e-mailem (~měsíc), stáhni ZIP, rozbal a soubory <code>Streaming_History_Audio_*.json</code> hoď sem.</li>
-        </ol>
-      </div>
-
-      <div id="importResult" class="hidden">
-        <h2 style="margin-top:26px;">Souhrn</h2>
-        <p class="muted" id="range"></p>
-        <div class="cards" id="cards"></div>
-        <h2>Top umělci</h2>  <div id="impArtists"></div>
-        <h2>Top skladby</h2> <div id="impTracks"></div>
-        <h2>Top alba</h2>    <div id="impAlbums"></div>
-        <h2>Poslech podle roku</h2>       <div id="byYear"></div>
-        <h2>Poslech podle hodiny dne</h2> <div id="byHour"></div>
-      </div>
-    </div>
   </div>
-
-  <footer>Pokud tohle čteš, tak ti přeju krásný den ty močko</footer>
 
 <script>
 /* =====================================================================
-   NASTAVENÍ – Client ID z developer.spotify.com.
-   REDIRECT_URI se MUSÍ přesně shodovat s tím, co máš v Spotify dashboardu!
+   NASTAVENÍ
    ===================================================================== */
 const CLIENT_ID    = '60a67355f29d4efc927bc4f51c0ab040';
-// Adresa, kam nás Spotify vrátí. Bere se automaticky podle toho, kde web běží
-// (lokálně i po nasazení) – tuto adresu MUSÍŠ mít přidanou v Spotify dashboardu.
+// Adresa, kam nás Spotify vrátí – automaticky podle toho, kde web běží.
+// Tuto adresu MUSÍŠ mít přidanou v Spotify dashboardu.
 const REDIRECT_URI = location.origin + location.pathname;
 const SCOPES       = 'user-top-read user-read-recently-played user-read-currently-playing';
 const API = 'https://api.spotify.com/v1';
 
 /* =====================================================================
-   1) PŘIHLÁŠENÍ – tok "Authorization Code with PKCE".
-   Vytvoříme tajné náhodné heslo (verifier), pošleme Spotify jen jeho
-   "otisk" (challenge). Po přihlášení nás Spotify vrátí s kódem, ten
-   spolu s verifierem vyměníme za token. Žádný secret = bezpečné i bez serveru.
+   1) PŘIHLÁŠENÍ – Authorization Code with PKCE (bezpečné i bez serveru)
    ===================================================================== */
 function base64url(buf){
   const bytes = buf instanceof ArrayBuffer ? new Uint8Array(buf) : buf;
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
 function randomVerifier(){ const a=new Uint8Array(64); crypto.getRandomValues(a); return base64url(a); }
-async function challengeFrom(verifier){
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
-  return base64url(digest);
-}
+async function challengeFrom(v){ return base64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v))); }
 
 async function login(){
   const verifier = randomVerifier();
   localStorage.setItem('pkce_verifier', verifier);
   const params = new URLSearchParams({
-    client_id: CLIENT_ID, response_type: 'code', redirect_uri: REDIRECT_URI,
-    scope: SCOPES, code_challenge_method: 'S256', code_challenge: await challengeFrom(verifier),
+    client_id:CLIENT_ID, response_type:'code', redirect_uri:REDIRECT_URI,
+    scope:SCOPES, code_challenge_method:'S256', code_challenge:await challengeFrom(verifier),
   });
   location.href = 'https://accounts.spotify.com/authorize?' + params.toString();
 }
 
 async function handleRedirect(){
-  const params = new URLSearchParams(location.search);
-  if(params.get('error')){ alert('Přihlášení zamítnuto: ' + params.get('error')); cleanUrl(); return false; }
-  const code = params.get('code');
-  if(!code) return false;
+  const p = new URLSearchParams(location.search);
+  if(p.get('error')){ alert('Přihlášení zamítnuto: ' + p.get('error')); cleanUrl(); return false; }
+  const code = p.get('code'); if(!code) return false;
   const body = new URLSearchParams({
-    client_id: CLIENT_ID, grant_type: 'authorization_code', code,
-    redirect_uri: REDIRECT_URI, code_verifier: localStorage.getItem('pkce_verifier'),
+    client_id:CLIENT_ID, grant_type:'authorization_code', code,
+    redirect_uri:REDIRECT_URI, code_verifier:localStorage.getItem('pkce_verifier'),
   });
-  const res  = await fetch('https://accounts.spotify.com/api/token', {
-    method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body
-  });
-  const data = await res.json();
-  cleanUrl();
+  const res  = await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+  const data = await res.json(); cleanUrl();
   if(data.access_token){ saveTokens(data); return true; }
-  alert('Nepodařilo se získat token: ' + (data.error_description || '?'));
-  return false;
+  alert('Nepodařilo se získat token: ' + (data.error_description||'?')); return false;
 }
-
 function saveTokens(d){
   localStorage.setItem('access_token', d.access_token);
   if(d.refresh_token) localStorage.setItem('refresh_token', d.refresh_token);
   localStorage.setItem('expires_at', Date.now() + d.expires_in*1000);
 }
-function cleanUrl(){ history.replaceState(null, '', location.pathname); }
-
+function cleanUrl(){ history.replaceState(null,'',location.pathname); }
 async function getToken(){
   if(Date.now() > (+localStorage.getItem('expires_at')) - 60000){
     const rt = localStorage.getItem('refresh_token');
     if(rt){
       const body = new URLSearchParams({grant_type:'refresh_token', refresh_token:rt, client_id:CLIENT_ID});
       const res  = await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
-      const data = await res.json();
-      if(data.access_token) saveTokens(data);
+      const data = await res.json(); if(data.access_token) saveTokens(data);
     }
   }
   return localStorage.getItem('access_token');
 }
-
 async function api(path){
-  const token = await getToken();
-  const res = await fetch(API + path, {headers:{Authorization:'Bearer ' + token}});
+  const res = await fetch(API + path, {headers:{Authorization:'Bearer ' + await getToken()}});
   if(res.status === 204) return null;
   if(res.status === 401){ logout(); return null; }
   if(!res.ok) throw new Error('API ' + res.status);
   return res.json();
 }
-
-function logout(){
-  ['access_token','refresh_token','expires_at'].forEach(k=>localStorage.removeItem(k));
-  show('landing');
-}
+function logout(){ ['access_token','refresh_token','expires_at'].forEach(k=>localStorage.removeItem(k)); show('landing'); }
 
 /* =====================================================================
-   2) ŽIVÝ DASHBOARD – data z Web API
+   2) NAVIGACE
+   ===================================================================== */
+function show(view){
+  document.getElementById('landing').classList.toggle('hidden', view!=='landing');
+  document.getElementById('shell').classList.toggle('hidden', view!=='shell');
+}
+function navTo(name){
+  document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id==='sec-'+name));
+  document.querySelectorAll('.navlink').forEach(l => l.classList.toggle('active', l.dataset.nav===name));
+  document.querySelector('.main').scrollTop = 0;
+}
+document.querySelector('.sidebar').addEventListener('click', e => {
+  const link = e.target.closest('.navlink'); if(!link) return;
+  if(link.dataset.action === 'logout') return logout();
+  if(link.dataset.nav) navTo(link.dataset.nav);
+});
+
+/* =====================================================================
+   3) ŽIVÁ DATA Z API
    ===================================================================== */
 let currentRange = 'medium_term';
 
 async function loadLive(){
-  show('app'); showTab('overview');
-  api('/me').then(me => { if(me) document.getElementById('hello').textContent = 'Přihlášen: ' + me.display_name; });
+  show('shell'); navTo('prehled');
+  api('/me').then(me => { if(me) document.getElementById('userName').textContent = me.display_name; });
   loadNowPlaying(); loadTops(); loadRecent();
+  if(!window._npTimer) window._npTimer = setInterval(loadNowPlaying, 20000);
 }
 
 async function loadNowPlaying(){
-  const el = document.getElementById('nowPlaying');
-  try{
-    const d = await api('/me/player/currently-playing');
-    if(!d || !d.item){ el.innerHTML = '<span class="muted">Teď nic nehraje</span>'; return; }
-    const t = d.item;
-    el.innerHTML = `<img src="${imgUrl(t.album.images,0)}" alt="">
-      <div><div class="muted" style="font-size:12px;">Právě hraje</div>
-      <div style="font-size:18px; font-weight:700;">${esc(t.name)}</div>
-      <div class="muted">${esc(artistsOf(t))}</div></div>`;
-  }catch(e){ el.innerHTML = '<span class="muted">Nepodařilo se načíst.</span>'; }
+  let t = null;
+  try{ const d = await api('/me/player/currently-playing'); t = (d && d.item) ? d.item : null; }catch(e){}
+  const big = document.getElementById('nowBig'), mini = document.getElementById('nowMini');
+  if(!t){
+    big.innerHTML = '<span class="muted">Teď nic nehraje</span>';
+    mini.innerHTML = '<span class="muted">Nic nehraje</span>';
+    return;
+  }
+  const art = artistsOf(t);
+  big.innerHTML  = `<img src="${imgUrl(t.album.images,0)}" alt="">
+    <div><div class="muted" style="font-size:12px;">Právě hraje</div>
+    <div style="font-size:22px; font-weight:800;">${esc(t.name)}</div>
+    <div class="muted">${esc(art)}</div></div>`;
+  mini.innerHTML = `<img src="${imgUrl(t.album.images,2)}" alt="">
+    <div class="ltext"><div class="ltitle">${esc(t.name)}</div><div class="lsub">${esc(art)}</div></div>`;
 }
 
 async function loadTops(){
-  const [artists, tracks] = await Promise.all([
-    api('/me/top/artists?limit=30&time_range=' + currentRange),
-    api('/me/top/tracks?limit=30&time_range='  + currentRange),
+  const [a, t] = await Promise.all([
+    api('/me/top/artists?limit=50&time_range=' + currentRange),
+    api('/me/top/tracks?limit=50&time_range='  + currentRange),
   ]);
-  renderTop('topArtists', (artists?.items)||[], 'artist');
-  renderTop('topTracks',  (tracks?.items)||[],  'track');
+  const artists = (a?.items)||[], tracks = (t?.items)||[];
+  renderTop('topArtists', artists, 'artist');
+  renderTop('topTracks',  tracks,  'track');
+  renderTop('prevArtists', artists.slice(0,5), 'artist');
+  renderTop('prevTracks',  tracks.slice(0,5),  'track');
 }
 
 async function loadRecent(){
@@ -357,29 +410,28 @@ async function loadRecent(){
     const when = date.toLocaleTimeString('cs',{hour:'2-digit',minute:'2-digit'}) + ' · ' + timeAgo(date);
     return rowHtml(imgUrl(t.album.images,2), t.name, artistsOf(t), when);
   }).join('') || '<span class="muted">Žádná data.</span>';
-  collapse('recent', 5);
 }
 
 function renderTop(id, items, type){
   const el = document.getElementById(id);
-  if(!items.length){ el.innerHTML = '<span class="muted">Pro toto období zatím nejsou data.</span>'; collapse(id,5); return; }
+  if(!items.length){ el.innerHTML = '<span class="muted">Pro toto období zatím nejsou data.</span>'; return; }
   el.innerHTML = items.map((it,i) => {
     const img = type === 'artist' ? imgUrl(it.images,2) : imgUrl(it.album.images,2);
     const sub = type === 'artist' ? (it.genres||[]).slice(0,2).join(', ') : artistsOf(it);
     return `<div class="lrow"><div class="rank">${i+1}</div>${rowInner(img, it.name, sub)}</div>`;
   }).join('');
-  collapse(id, 5);
 }
 
-document.getElementById('rangeChips').addEventListener('click', e => {
-  const chip = e.target.closest('.chip'); if(!chip) return;
-  currentRange = chip.dataset.r;
-  document.querySelectorAll('#rangeChips .chip').forEach(c => c.classList.toggle('active', c === chip));
+// Přepínač období – synchronizuje všechny chip řádky
+function setRange(r){
+  currentRange = r;
+  document.querySelectorAll('.rangeChips .chip').forEach(c => c.classList.toggle('active', c.dataset.r===r));
   loadTops();
-});
+}
+document.addEventListener('click', e => { const c = e.target.closest('.rangeChips .chip'); if(c) setRange(c.dataset.r); });
 
 /* =====================================================================
-   3) IMPORT EXPORTU – přesná historie
+   4) IMPORT EXPORTU – přesná historie
    ===================================================================== */
 const dropZone  = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
@@ -398,20 +450,17 @@ async function handleFiles(fileList){
     catch(err){ console.warn('Nešlo přečíst', file.name, err); }
   }
   const records = raw.map(normalize).filter(Boolean);
-  if(!records.length){ alert('Nenašel jsem žádná přehrání skladeb 🤔'); return; }
+  if(!records.length){ alert('Nenašel jsem žádná přehrání skladeb.'); return; }
   renderImport(buildStats(records));
 }
-
 function normalize(r){
-  const ms = r.ms_played ?? r.msPlayed ?? 0;
-  if(ms <= 0) return null;
+  const ms = r.ms_played ?? r.msPlayed ?? 0; if(ms <= 0) return null;
   const track  = r.master_metadata_track_name       ?? r.trackName;
   const artist = r.master_metadata_album_artist_name ?? r.artistName;
   const album  = r.master_metadata_album_album_name  ?? null;
   if(!track || !artist) return null;
   return { date:new Date(r.ts ?? r.endTime), ms, track, artist, album };
 }
-
 function buildStats(records){
   let totalMs = 0;
   const aMap=new Map(), tMap=new Map(), alMap=new Map(), yMap=new Map(), hArr=new Array(24).fill(0);
@@ -429,22 +478,17 @@ function buildStats(records){
     }
   }
   const sort=(m,n)=>[...m.values()].sort((a,b)=>b.ms-a.ms).slice(0,n);
-  return {
-    totalMs, totalStreams:records.length, uniqueArtists:aMap.size, uniqueTracks:tMap.size, minDate:min, maxDate:max,
+  return { totalMs, totalStreams:records.length, uniqueArtists:aMap.size, uniqueTracks:tMap.size, minDate:min, maxDate:max,
     topArtists:[...aMap.entries()].map(([artist,v])=>({artist,...v})).sort((a,b)=>b.ms-a.ms).slice(0,30),
     topTracks:sort(tMap,30), topAlbums:sort(alMap,30),
-    byYear:[...yMap.entries()].sort((a,b)=>a[0]-b[0]), byHour:hArr,
-  };
+    byYear:[...yMap.entries()].sort((a,b)=>a[0]-b[0]), byHour:hArr };
 }
-
 function renderImport(s){
   document.getElementById('importResult').classList.remove('hidden');
   document.getElementById('range').textContent = fmtDate(s.minDate)+' – '+fmtDate(s.maxDate);
   document.getElementById('cards').innerHTML = [
-    card(fmtDuration(s.totalMs),'celkový čas'),
-    card(Math.round(s.totalMs/3600000).toLocaleString('cs'),'hodin celkem'),
-    card(s.totalStreams.toLocaleString('cs'),'přehrání'),
-    card(s.uniqueArtists.toLocaleString('cs'),'umělců'),
+    card(fmtDuration(s.totalMs),'celkový čas'), card(Math.round(s.totalMs/3600000).toLocaleString('cs'),'hodin celkem'),
+    card(s.totalStreams.toLocaleString('cs'),'přehrání'), card(s.uniqueArtists.toLocaleString('cs'),'umělců'),
     card(s.uniqueTracks.toLocaleString('cs'),'skladeb'),
   ].join('');
   renderRanked('impArtists', s.topArtists.map(a=>[a.artist, a.ms, a.count]));
@@ -453,7 +497,6 @@ function renderImport(s){
   renderOrdered('byYear', s.byYear.map(([y,ms])=>[String(y), ms]));
   renderOrdered('byHour', s.byHour.map((ms,h)=>[h+':00', ms]));
 }
-
 function renderRanked(id, rows){
   const max = rows.length ? rows[0][1] : 1;
   document.getElementById(id).innerHTML = rows.map(([label,ms,count],i)=>`
@@ -461,7 +504,6 @@ function renderRanked(id, rows){
       <div class="bar-label"><span class="name">${esc(label)}</span><span class="val">${fmtDuration(ms)}${count?` · ${count}×`:''}</span></div>
       <div class="bar"><div class="bar-fill" style="width:${(ms/max*100).toFixed(1)}%"></div></div>
     </div></div>`).join('');
-  collapse(id, 5);
 }
 function renderOrdered(id, rows){
   const max = Math.max(1, ...rows.map(r=>r[1]));
@@ -472,57 +514,25 @@ function renderOrdered(id, rows){
 }
 
 /* =====================================================================
-   4) POMOCNÉ FUNKCE
+   5) POMOCNÉ FUNKCE
    ===================================================================== */
-// Přepínání úvod / aplikace
-function show(view){ ['landing','app'].forEach(v => document.getElementById(v).classList.toggle('hidden', v!==view)); }
-// Přepínání záložek uvnitř aplikace
-function showTab(t){
-  document.getElementById('tabOverview').classList.toggle('hidden', t!=='overview');
-  document.getElementById('tabImport').classList.toggle('hidden', t!=='import');
-  document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.t===t));
-}
-
-// "Zobrazit více": skryje řádky nad limit a přidá přepínací tlačítko
-function collapse(containerId, n){
-  const el = document.getElementById(containerId);
-  const rows = [...el.children];
-  const existing = document.getElementById(containerId+'_more');
-  if(rows.length <= n){ if(existing) existing.remove(); return; }
-  let expanded = false;
-  const apply = () => rows.forEach((r,i) => { r.style.display = (expanded || i<n) ? '' : 'none'; });
-  apply();
-  const btn = existing || document.createElement('button');
-  btn.id = containerId+'_more'; btn.className = 'more-btn';
-  if(!existing) el.after(btn);
-  const label = () => btn.textContent = expanded ? 'Zobrazit méně' : `Zobrazit více (${rows.length-n})`;
-  label();
-  btn.onclick = () => { expanded = !expanded; apply(); label(); };
-}
-
-// "před X" – relativní čas
-function timeAgo(date){
-  const s = Math.floor((Date.now() - date.getTime())/1000);
-  if(s < 60) return 'právě teď';
-  const m = Math.floor(s/60); if(m < 60) return `před ${m} min`;
-  const h = Math.floor(m/60); if(h < 24) return `před ${h} h`;
-  const d = Math.floor(h/24); return d === 1 ? 'včera' : `před ${d} dny`;
-}
-
 function imgUrl(images, idx){ if(!images||!images.length) return ''; return (images[idx]||images[images.length-1]).url; }
 function artistsOf(t){ return (t.artists||[]).map(a=>a.name).join(', '); }
-function rowInner(img, title, sub){ return `<img src="${img}" alt="" loading="lazy"><div class="ltext"><div class="ltitle">${esc(title)}</div><div class="lsub">${esc(sub)}</div></div>`; }
-function rowHtml(img, title, sub, when){ return `<div class="lrow">${rowInner(img,title,sub)}<div class="lwhen">${when}</div></div>`; }
+function rowInner(img,title,sub){ return `<img src="${img}" alt="" loading="lazy"><div class="ltext"><div class="ltitle">${esc(title)}</div><div class="lsub">${esc(sub)}</div></div>`; }
+function rowHtml(img,title,sub,when){ return `<div class="lrow">${rowInner(img,title,sub)}<div class="lwhen">${when}</div></div>`; }
 function card(num,lbl){ return `<div class="card"><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`; }
 function fmtDuration(ms){ const m=Math.floor(ms/60000), d=Math.floor(m/1440), h=Math.floor(m%1440/60), mm=m%60; return d>0?`${d} d ${h} h`:h>0?`${h} h ${mm} min`:`${mm} min`; }
 function fmtDate(d){ return isNaN(d)?'?':d.toLocaleDateString('cs',{day:'numeric',month:'numeric',year:'numeric'}); }
+function timeAgo(date){
+  const s=Math.floor((Date.now()-date.getTime())/1000); if(s<60) return 'právě teď';
+  const m=Math.floor(s/60); if(m<60) return `před ${m} min`;
+  const h=Math.floor(m/60); if(h<24) return `před ${h} h`;
+  const d=Math.floor(h/24); return d===1?'včera':`před ${d} dny`;
+}
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-/* ====== Události a start ====== */
+/* ====== Start ====== */
 document.getElementById('loginBtn').addEventListener('click', login);
-document.getElementById('logoutBtn').addEventListener('click', logout);
-document.querySelector('.tabs').addEventListener('click', e => { const t = e.target.closest('.tab'); if(t) showTab(t.dataset.t); });
-
 (async function init(){
   const justLoggedIn = await handleRedirect();
   if(justLoggedIn || localStorage.getItem('access_token')) loadLive();
