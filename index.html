@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Moje Spotify statistiky</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0d16">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   /* ====== Základ ====== */
   :root{
@@ -512,7 +515,7 @@ function clip(s,n){ return s.length>n ? s.slice(0,n-1)+'…' : s; }
 function generateShareCard(){
   const artists = (window._artists||[]).slice(0,5);
   const tracks  = (window._tracks||[]).slice(0,5);
-  if(!artists.length && !tracks.length){ alert('Počkej chvilku.'); return; }
+  if(!artists.length && !tracks.length){ alert('Počkej, až se načtou data.'); return; }
   const W=1080, H=1920, c=document.createElement('canvas'); c.width=W; c.height=H;
   const x=c.getContext('2d');
   const g=x.createLinearGradient(0,0,W,H);
@@ -520,8 +523,8 @@ function generateShareCard(){
   x.fillStyle=g; x.fillRect(0,0,W,H);
   x.fillStyle='rgba(30,215,96,.22)'; x.beginPath(); x.arc(W*0.82,200,260,0,7); x.fill();
   x.textBaseline='top';
-  x.fillStyle='#fff';    x.font='800 70px Segoe UI, Arial, sans-serif'; x.fillText('Tvoje poslechy', 80, 120);
-  x.fillStyle='#1ed760'; x.fillText('na Spotify', 80, 206);
+  x.fillStyle='#fff';    x.font='800 70px Segoe UI, Arial, sans-serif'; x.fillText('Moje Spotify', 80, 120);
+  x.fillStyle='#1ed760'; x.fillText('TOP', 80, 206);
   const rl={short_term:'Poslední 4 týdny',medium_term:'Posledních 6 měsíců',long_term:'Celá doba'}[currentRange]||'';
   x.fillStyle='#aab3c0'; x.font='400 36px Segoe UI, Arial, sans-serif'; x.fillText(rl, 82, 312);
   let y=440;
@@ -530,7 +533,7 @@ function generateShareCard(){
   y+=46;
   x.fillStyle='#1ed760'; x.font='700 40px Segoe UI, Arial'; x.fillText('Skladby', 80, y); y+=78;
   tracks.forEach((t,i)=>{ x.font='600 42px Segoe UI, Arial'; x.fillStyle='#1ed760'; x.fillText((i+1)+'.', 80, y); x.fillStyle='#fff'; x.fillText(clip(t.name,26), 168, y); y+=64; });
-  x.fillStyle='#8b94a3'; x.font='400 30px Segoe UI, Arial'; x.fillText('Jestli tohle čteš tak ti přeju krásný den ty močko', 80, H-100);
+  x.fillStyle='#8b94a3'; x.font='400 30px Segoe UI, Arial'; x.fillText('vygenerováno mojí Spotify statistikou', 80, H-100);
   const a=document.createElement('a'); a.download='spotify-top.png'; a.href=c.toDataURL('image/png'); a.click();
 }
 document.getElementById('shareBtn').addEventListener('click', generateShareCard);
@@ -650,6 +653,9 @@ document.getElementById('loginBtn').addEventListener('click', login);
   if(justLoggedIn || localStorage.getItem('access_token')) loadLive();
   else show('landing');
 })();
+
+// Service worker – instalace PWA na plochu telefonu + běh offline
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 </script>
 </body>
 </html>
