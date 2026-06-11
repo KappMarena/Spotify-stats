@@ -353,12 +353,17 @@
 /* =====================================================================
    NASTAVENÍ
    ===================================================================== */
-const CLIENT_ID    = '60a67355f29d4efc927bc4f51c0ab040';
-// Adresa, kam nás Spotify vrátí – automaticky podle toho, kde web běží.
-// Tuto adresu MUSÍŠ mít přidanou v Spotify dashboardu.
-const REDIRECT_URI = location.origin + location.pathname;
-const SCOPES       = 'user-top-read user-read-recently-played user-read-currently-playing';
-const API = 'https://api.spotify.com/v1';
+const SERVER = 'https://spotify-stats-marena.fly.dev';   // náš backend v cloudu
+
+// Volání serveru – přikládá session token (z přihlášení) v hlavičce Authorization.
+async function srv(path, opts = {}){
+  const sid = localStorage.getItem('sid');
+  const headers = Object.assign({}, opts.headers, sid ? { Authorization: 'Bearer ' + sid } : {});
+  const res = await fetch(SERVER + path, Object.assign({ credentials: 'include' }, opts, { headers }));
+  if(res.status === 401) return null;
+  if(!res.ok) throw new Error('Server ' + res.status);
+  return res.json();
+}
 
 /* =====================================================================
    1) PŘIHLÁŠENÍ – Authorization Code with PKCE (bezpečné i bez serveru)
@@ -370,15 +375,7 @@ function base64url(buf){
 function randomVerifier(){ const a=new Uint8Array(64); crypto.getRandomValues(a); return base64url(a); }
 async function challengeFrom(v){ return base64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v))); }
 
-async function login(){
-  const verifier = randomVerifier();
-  localStorage.setItem('pkce_verifier', verifier);
-  const params = new URLSearchParams({
-    client_id:CLIENT_ID, response_type:'code', redirect_uri:REDIRECT_URI,
-    scope:SCOPES, code_challenge_method:'S256', code_challenge:await challengeFrom(verifier),
-  });
-  location.href = 'https://accounts.spotify.com/authorize?' + params.toString();
-}
+function login(){ location.href = SERVER + '/login'; }
 
 async function handleRedirect(){
   const p = new URLSearchParams(location.search);
@@ -417,7 +414,7 @@ async function api(path){
   if(!res.ok) throw new Error('API ' + res.status);
   return res.json();
 }
-function logout(){ ['access_token','refresh_token','expires_at'].forEach(k=>localStorage.removeItem(k)); show('landing'); }
+function logout(){ srv('/api/logout').finally(() => { localStorage.removeItem('sid'); show('landing'); }); }
 
 /* =====================================================================
    2) NAVIGACE
@@ -445,18 +442,57 @@ let currentRange = 'medium_term';
 
 async function loadLive(){
   show('shell'); navTo('prehled');
-  api('/me').then(me => { if(me) document.getElementById('userName').textContent = me.display_name; });
-  loadNowPlaying(); loadApiExtras();
-  await loadSavedImport();   // nejdřív načti uložená data
-  loadRecent();              // zobrazí historii + posbírá nová přehrání
-  renderTops();
+  const me = await srv('/api/me');
+  if(!me){ show('landing'); return; }
+  document.getElementById('userName').textContent = me.displayName || '';
+  await migrateLocalImport();   // jednorázově přesune starý import z prohlížeče na server
+  await loadHistory();          // statistiky z /api/plays (server sbírá 24/7)
+  loadApiExtras();              // žánry + fotky z /api/top
+  loadNowPlaying();             // /api/now-playing
+  loadRecent();                 // /api/recent (jen zobrazení)
   if(!window._npTimer) window._npTimer = setInterval(loadNowPlaying, 20000);
-  if(!window._collectTimer) window._collectTimer = setInterval(loadRecent, 45000); // sběr nových přehrání
+}
+
+// Historie ze serveru → statistiky
+async function loadHistory(){
+  const plays = (await srv('/api/plays')) || [];
+  window._importRecords = plays.map(p => ({ date:new Date(p.playedAt), ms:p.ms, track:p.track, artist:p.artist, album:p.album }));
+  renderTops();
+  renderHours();
+}
+// Graf "kdy posloucháš" z celé historie (bez prázdných hodin)
+function renderHours(){
+  const recs = window._importRecords || [];
+  const hours = new Array(24).fill(0);
+  recs.forEach(r => { hours[r.date.getHours()]++; });
+  const entries = hours.map((c,h)=>[h,c]).filter(([,c]) => c > 0);
+  const mx = Math.max(1, ...entries.map(e=>e[1]));
+  const el = document.getElementById('byHourLive'); if(!el) return;
+  el.innerHTML = entries.map(([h,c],i)=>`
+    <div class="row" style="animation-delay:${(Math.min(i,18)*0.03).toFixed(2)}s"><div class="rank">${h}</div>
+    <div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:${(c/mx*100).toFixed(1)}%"></div></div></div>
+    <div class="val muted" style="width:60px; text-align:right;">${c.toLocaleString('cs')}×</div></div>`).join('') || '<span class="muted">Zatím žádná data.</span>';
+}
+// Pošle pole záznamů na server po dávkách (ať to zvládne i velký export)
+async function postImport(records){
+  for(let i=0;i<records.length;i+=5000){
+    await srv('/api/import', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(records.slice(i,i+5000)) });
+  }
+}
+// Jednorázová migrace: starý import z prohlížeče (IndexedDB) přesune na server
+async function migrateLocalImport(){
+  try{
+    const recs = await idbGet('records');
+    if(recs && recs.length){
+      await postImport(recs.map(r => ({ ts:new Date(r.date).getTime(), ms:r.ms, track:r.track, artist:r.artist, album:r.album })));
+      await idbDel('records'); await idbDel('collected'); await idbDel('lastCollected');
+    }
+  }catch(e){ console.warn('Migrace importu selhala', e); }
 }
 
 async function loadNowPlaying(){
   let t = null;
-  try{ const d = await api('/me/player/currently-playing'); t = (d && d.item) ? d.item : null; }catch(e){}
+  try{ t = await srv('/api/now-playing'); }catch(e){}
   setBackground(t);
   const big = document.getElementById('nowBig'), mini = document.getElementById('nowMini');
   if(!t){
@@ -476,11 +512,8 @@ async function loadNowPlaying(){
 // Z API: žánry + fotky umělců a obaly skladeb (export je nemá)
 async function loadApiExtras(){
   try{
-    const [a, t] = await Promise.all([
-      api('/me/top/artists?limit=50&time_range=long_term'),
-      api('/me/top/tracks?limit=50&time_range=long_term'),
-    ]);
-    const artists = (a?.items)||[], tracks = (t?.items)||[];
+    const d = await srv('/api/top'); if(!d) return;
+    const artists = d.artists || [], tracks = d.tracks || [];
     renderGenres(artists);
     window._artistImg = {}; artists.forEach(ar => { const u=imgUrl(ar.images,1); if(u) window._artistImg[ar.name.toLowerCase()] = u; });
     window._trackImg  = {}; tracks.forEach(tr => { const u=imgUrl(tr.album.images,1); if(u) window._trackImg[tr.name.toLowerCase()] = u; });
@@ -490,27 +523,13 @@ async function loadApiExtras(){
 }
 
 async function loadRecent(){
-  const d = await api('/me/player/recently-played?limit=50');
-  const items = (d?.items)||[];
+  const items = (await srv('/api/recent')) || [];
   document.getElementById('recent').innerHTML = items.map((it,i) => {
     const t = it.track, date = new Date(it.played_at);
     const when = date.toLocaleTimeString('cs',{hour:'2-digit',minute:'2-digit'}) + ' · ' + timeAgo(date);
     return rowHtml(imgUrl(t.album.images,2), t.name, artistsOf(t), when, i, (t.external_urls&&t.external_urls.spotify)||'');
   }).join('') || '<span class="muted">Žádná data.</span>';
-
-  await collectNewPlays(items);   // ulož nová přehrání do historie
-
-  // Kdy posloucháš – z celé uložené historie (import + sběr), bez prázdných hodin
-  const src = (window._importRecords && window._importRecords.length)
-    ? window._importRecords : items.map(it => ({ date:new Date(it.played_at) }));
-  const hours = new Array(24).fill(0);
-  src.forEach(r => { hours[r.date.getHours()]++; });
-  const entries = hours.map((c,h)=>[h,c]).filter(([,c]) => c > 0);
-  const mx = Math.max(1, ...entries.map(e=>e[1]));
-  document.getElementById('byHourLive').innerHTML = entries.map(([h,c],i)=>`
-    <div class="row" style="animation-delay:${(Math.min(i,18)*0.03).toFixed(2)}s"><div class="rank">${h}</div>
-    <div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:${(c/mx*100).toFixed(1)}%"></div></div></div>
-    <div class="val muted" style="width:60px; text-align:right;">${c.toLocaleString('cs')}×</div></div>`).join('') || '<span class="muted">Zatím žádná data.</span>';
+  renderHours();
 }
 
 function renderTop(id, items, type){
@@ -699,18 +718,13 @@ async function handleFiles(fileList){
   }
   const records = raw.map(normalize).filter(Boolean);
   if(!records.length){ alert('Nenašel jsem žádná přehrání skladeb.'); return; }
-  window._baseImport = records;
-  window._collected = window._collected || (await idbGet('collected')) || [];
-  window._importRecords = records.concat(window._collected);
-  try{
-    await idbSet('records', records);
-    await idbSet('importedAt', Date.now());
-    const maxTs = records.reduce((m,r)=>Math.max(m, r.date.getTime()), 0);
-    if(maxTs > +(await idbGet('lastCollected')||0)) await idbSet('lastCollected', maxTs);
-  }catch(err){ console.warn('Uložení do databáze selhalo', err); }
+  document.getElementById('importMetaText').textContent = 'Nahrávám na server…';
+  document.getElementById('importMeta').classList.remove('hidden');
+  document.getElementById('importMeta').style.display = 'flex';
+  await postImport(records.map(r => ({ ts:r.date.getTime(), ms:r.ms, track:r.track, artist:r.artist, album:r.album })));
+  await loadHistory();    // znovu načti vše ze serveru (import + sběr dohromady)
   renderImport(buildStats(window._importRecords));
   showImportMeta(window._importRecords.length, Date.now());
-  renderTops();
 }
 function normalize(r){
   const ms = r.ms_played ?? r.msPlayed ?? 0; if(ms <= 0) return null;
@@ -841,14 +855,11 @@ function showImportMeta(count, ts){
 }
 
 // Smazání uložených dat
-document.getElementById('clearImportBtn').addEventListener('click', async () => {
-  if(!confirm('Opravdu smazat všechna nahraná i posbíraná data?')) return;
-  await idbDel('records'); await idbDel('importedAt'); await idbDel('collected'); await idbDel('lastCollected');
-  window._importRecords = null; window._baseImport = []; window._collected = [];
+document.getElementById('clearImportBtn').addEventListener('click', () => {
+  // data jsou teď na serveru – tlačítko jen schová tenhle blok
   document.getElementById('importResult').classList.add('hidden');
   document.getElementById('importMeta').classList.add('hidden');
   document.getElementById('importMeta').style.display = 'none';
-  renderTops();
 });
 
 /* =====================================================================
@@ -922,9 +933,10 @@ function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt
 /* ====== Start ====== */
 document.getElementById('loginBtn').addEventListener('click', login);
 (async function init(){
-  const justLoggedIn = await handleRedirect();
-  if(justLoggedIn || localStorage.getItem('access_token')) loadLive();
-  else show('landing');
+  const m = location.hash.match(/sid=([^&]+)/);   // token po přihlášení z fragmentu URL
+  if(m){ localStorage.setItem('sid', m[1]); history.replaceState(null, '', location.pathname); }
+  const me = await srv('/api/me');
+  if(me) loadLive(); else show('landing');
 })();
 
 // Service worker – instalace PWA na plochu telefonu + běh offline
