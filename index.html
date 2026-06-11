@@ -459,6 +459,10 @@ async function loadHistory(){
   window._importRecords = plays.map(p => ({ date:new Date(p.playedAt), ms:p.ms, track:p.track, artist:p.artist, album:p.album }));
   renderTops();
   renderHours();
+  if(window._importRecords.length){   // ukaž souhrn i v záložce Přesná historie
+    renderImport(buildStats(window._importRecords));
+    showImportMeta(window._importRecords.length, null);
+  }
 }
 // Graf "kdy posloucháš" z celé historie (bez prázdných hodin)
 function renderHours(){
