@@ -232,6 +232,7 @@
               <div class="chip" data-r="short_term">4 týdny</div>
               <div class="chip active" data-r="medium_term">6 měsíců</div>
               <div class="chip" data-r="long_term">Celá doba</div>
+              <div class="chip" data-r="import">Z importu</div>
             </div>
             <div id="prevArtists"></div>
           </div>
@@ -252,6 +253,7 @@
           <div class="chip" data-r="short_term">4 týdny</div>
           <div class="chip active" data-r="medium_term">6 měsíců</div>
           <div class="chip" data-r="long_term">Celá doba</div>
+              <div class="chip" data-r="import">Z importu</div>
         </div>
         <div id="topArtists"></div>
       </section>
@@ -263,6 +265,7 @@
           <div class="chip" data-r="short_term">4 týdny</div>
           <div class="chip active" data-r="medium_term">6 měsíců</div>
           <div class="chip" data-r="long_term">Celá doba</div>
+              <div class="chip" data-r="import">Z importu</div>
         </div>
         <div id="topTracks"></div>
       </section>
@@ -294,6 +297,11 @@
             <li><a href="https://www.spotify.com/account/privacy/" target="_blank" rel="noopener">Účet → Soukromí</a> → „Rozšířená historie streamování" → Požádat o data</li>
             <li>Přijde e-mailem (~měsíc), stáhni ZIP, rozbal a soubory <code>Streaming_History_Audio_*.json</code> hoď sem.</li>
           </ol>
+        </div>
+
+        <div id="importMeta" class="hidden" style="margin-top:14px; align-items:center; gap:12px; flex-wrap:wrap;">
+          <span class="muted" id="importMetaText"></span>
+          <button id="clearImportBtn" style="background:var(--tile); color:var(--text); border:1px solid var(--brd); padding:8px 16px; border-radius:20px; cursor:pointer; font-size:13px;">Smazat nahraná data</button>
         </div>
 
         <div id="importResult" class="hidden">
@@ -416,6 +424,7 @@ async function loadLive(){
   show('shell'); navTo('prehled');
   api('/me').then(me => { if(me) document.getElementById('userName').textContent = me.display_name; });
   loadNowPlaying(); loadTops(); loadRecent();
+  loadSavedImport();   // načti dříve nahraný export, pokud existuje
   if(!window._npTimer) window._npTimer = setInterval(loadNowPlaying, 20000);
 }
 
@@ -485,7 +494,22 @@ function renderTop(id, items, type){
 function setRange(r){
   currentRange = r;
   document.querySelectorAll('.rangeChips .chip').forEach(c => c.classList.toggle('active', c.dataset.r===r));
-  loadTops();
+  if(r === 'import') renderImportTops(); else loadTops();
+}
+
+// Top umělci/skladby z NAHRANÉHO exportu (přesná celá historie podle času poslechu)
+function renderImportTops(){
+  const recs = window._importRecords;
+  const ids = ['topArtists','topTracks','prevArtists','prevTracks'];
+  if(!recs || !recs.length){
+    ids.forEach(id => document.getElementById(id).innerHTML = '<span class="muted">Nejdřív nahraj export v záložce „Přesná historie".</span>');
+    return;
+  }
+  const s = buildStats(recs);
+  renderRanked('topArtists',  s.topArtists.map(a=>[a.artist, a.ms, a.count]));
+  renderRanked('topTracks',   s.topTracks.map(t=>[`${t.track} — ${t.artist}`, t.ms, t.count]));
+  renderRanked('prevArtists', s.topArtists.slice(0,5).map(a=>[a.artist, a.ms, a.count]));
+  renderRanked('prevTracks',  s.topTracks.slice(0,5).map(t=>[`${t.track} — ${t.artist}`, t.ms, t.count]));
 }
 document.addEventListener('click', e => { const c = e.target.closest('.rangeChips .chip'); if(c) setRange(c.dataset.r); });
 
@@ -559,7 +583,11 @@ async function handleFiles(fileList){
   }
   const records = raw.map(normalize).filter(Boolean);
   if(!records.length){ alert('Nenašel jsem žádná přehrání skladeb.'); return; }
+  window._importRecords = records;
+  try{ await idbSet('records', records); await idbSet('importedAt', Date.now()); }
+  catch(err){ console.warn('Uložení do databáze selhalo', err); }
   renderImport(buildStats(records));
+  showImportMeta(records.length, Date.now());
 }
 function normalize(r){
   const ms = r.ms_played ?? r.msPlayed ?? 0; if(ms <= 0) return null;
@@ -620,6 +648,50 @@ function renderOrdered(id, rows){
       <div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:${(ms/max*100).toFixed(1)}%"></div></div></div>
       <div class="val muted" style="width:60px; text-align:right;">${Math.round(ms/3600000)} h</div></div>`).join('');
 }
+
+/* =====================================================================
+   4b) TRVALÉ ULOŽENÍ IMPORTU – IndexedDB (databáze přímo v prohlížeči)
+   Aby nahraná historie nezmizela po zavření/uspání stránky.
+   ===================================================================== */
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    const r = indexedDB.open('spotifyStats', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbSet(key,val){ const db=await idbOpen(); return new Promise((res,rej)=>{ const tx=db.transaction('kv','readwrite'); tx.objectStore('kv').put(val,key); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+async function idbGet(key){ const db=await idbOpen(); return new Promise((res,rej)=>{ const tx=db.transaction('kv','readonly'); const rq=tx.objectStore('kv').get(key); rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); }); }
+async function idbDel(key){ const db=await idbOpen(); return new Promise((res)=>{ const tx=db.transaction('kv','readwrite'); tx.objectStore('kv').delete(key); tx.oncomplete=()=>res(); }); }
+
+// Po startu načte uložený import (pokud je) a rovnou ho zobrazí
+async function loadSavedImport(){
+  try{
+    const records = await idbGet('records');
+    if(records && records.length){
+      window._importRecords = records;
+      renderImport(buildStats(records));
+      showImportMeta(records.length, await idbGet('importedAt'));
+    }
+  }catch(err){ console.warn('Načtení uloženého importu selhalo', err); }
+}
+
+function showImportMeta(count, ts){
+  document.getElementById('importMetaText').textContent =
+    `Nahráno ${count.toLocaleString('cs')} přehrání · ${ts ? new Date(ts).toLocaleString('cs') : ''}`;
+  document.getElementById('importMeta').classList.remove('hidden');
+  document.getElementById('importMeta').style.display = 'flex';
+}
+
+// Smazání uložených dat
+document.getElementById('clearImportBtn').addEventListener('click', async () => {
+  await idbDel('records'); await idbDel('importedAt');
+  window._importRecords = null;
+  document.getElementById('importResult').classList.add('hidden');
+  document.getElementById('importMeta').classList.add('hidden');
+  document.getElementById('importMeta').style.display = 'none';
+});
 
 /* =====================================================================
    5) POMOCNÉ FUNKCE
