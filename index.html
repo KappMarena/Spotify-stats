@@ -691,14 +691,15 @@ async function generateShareCard(range){
   x.fillStyle=g; x.fillRect(0,0,W,H);
   x.fillStyle='rgba(30,215,96,.16)'; x.beginPath(); x.arc(W*0.85,150,300,0,7); x.fill();
 
-  // nadpis
+  // nadpis (dvouřádkový)
   x.textBaseline='top'; x.textAlign='center';
-  x.fillStyle='#fff';    x.font='800 70px Segoe UI, Arial, sans-serif'; x.fillText('Moje Spotify TOP', W/2, 110);
+  x.fillStyle='#fff';    x.font='800 80px Segoe UI, Arial, sans-serif'; x.fillText('Tvoje stats', W/2, 90);
+  x.fillStyle='#1ed760'; x.font='800 80px Segoe UI, Arial, sans-serif'; x.fillText('na Spotify', W/2, 180);
   const rl = { short_term:'Poslední 4 týdny', medium_term:'Posledních 6 měsíců', long_term:'Celá doba', year:'Rok ' + new Date().getFullYear() }[range] || '';
-  x.fillStyle='#9fe7bf'; x.font='400 38px Segoe UI, Arial'; x.fillText(rl, W/2, 202);
+  x.fillStyle='#9fe7bf'; x.font='400 38px Segoe UI, Arial'; x.fillText(rl, W/2, 290);
 
   // TOP 3 umělci – fotka nad jménem, tři sloupce
-  const centers = [220, 540, 860], R = 150, cy = 440;
+  const centers = [220, 540, 860], R = 150, cy = 510;
   for(let i=0;i<3;i++){
     const a = artists[i]; if(!a) continue;
     const cx = centers[i];
@@ -721,7 +722,7 @@ async function generateShareCard(range){
 
   // TOP skladby (text, bez obrázků – žádné duplicitní obaly)
   x.textAlign='left';
-  let y=860;
+  let y=900;
   x.fillStyle='#1ed760'; x.font='700 44px Segoe UI, Arial'; x.fillText('Top skladby', 90, y); y+=86;
   tracks.forEach((t,i)=>{
     x.font='600 42px Segoe UI, Arial'; x.fillStyle='#1ed760'; x.fillText((i+1)+'.', 90, y);
@@ -730,7 +731,7 @@ async function generateShareCard(range){
     y+=118;
   });
 
-  x.textAlign='center'; x.fillStyle='#8b94a3'; x.font='400 30px Segoe UI, Arial'; x.fillText('vygenerováno mojí Spotify statistikou', W/2, H-90);
+  x.textAlign='center'; x.fillStyle='#8b94a3'; x.font='400 28px Segoe UI, Arial'; x.fillText('Pokud tohle čteš tak ti přeju krásný den, ty močko', W/2, H-90);
 
   const a=document.createElement('a'); a.download='spotify-top.png'; a.href=c.toDataURL('image/png'); a.click();
 }
