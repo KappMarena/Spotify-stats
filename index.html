@@ -231,9 +231,7 @@
             <div class="chips rangeChips">
               <div class="chip" data-r="short_term">4 týdny</div>
               <div class="chip active" data-r="medium_term">6 měsíců</div>
-              <div class="chip" data-r="long_term">Celá doba</div>
-              <div class="chip" data-r="import">Z importu</div>
-            </div>
+              <div class="chip" data-r="long_term">Celá doba</div>            </div>
             <div id="prevArtists"></div>
           </div>
           <div>
@@ -252,8 +250,13 @@
         <div class="chips rangeChips">
           <div class="chip" data-r="short_term">4 týdny</div>
           <div class="chip active" data-r="medium_term">6 měsíců</div>
-          <div class="chip" data-r="long_term">Celá doba</div>
-              <div class="chip" data-r="import">Z importu</div>
+          <div class="chip" data-r="long_term">Celá doba</div>        </div>
+        <div class="chips unitChips">
+          <span class="muted" style="align-self:center; margin-right:4px;">Čas v:</span>
+          <div class="chip active" data-u="min">minuty</div>
+          <div class="chip" data-u="h">hodiny</div>
+          <div class="chip" data-u="dny">dny</div>
+          <span class="streamCount" style="align-self:center; margin-left:auto; font-weight:700;"></span>
         </div>
         <div id="topArtists"></div>
       </section>
@@ -264,8 +267,13 @@
         <div class="chips rangeChips">
           <div class="chip" data-r="short_term">4 týdny</div>
           <div class="chip active" data-r="medium_term">6 měsíců</div>
-          <div class="chip" data-r="long_term">Celá doba</div>
-              <div class="chip" data-r="import">Z importu</div>
+          <div class="chip" data-r="long_term">Celá doba</div>        </div>
+        <div class="chips unitChips">
+          <span class="muted" style="align-self:center; margin-right:4px;">Čas v:</span>
+          <div class="chip active" data-u="min">minuty</div>
+          <div class="chip" data-u="h">hodiny</div>
+          <div class="chip" data-u="dny">dny</div>
+          <span class="streamCount" style="align-self:center; margin-left:auto; font-weight:700;"></span>
         </div>
         <div id="topTracks"></div>
       </section>
@@ -423,7 +431,8 @@ let currentRange = 'medium_term';
 async function loadLive(){
   show('shell'); navTo('prehled');
   api('/me').then(me => { if(me) document.getElementById('userName').textContent = me.display_name; });
-  loadNowPlaying(); loadTops(); loadRecent();
+  loadNowPlaying(); loadApiExtras(); loadRecent();
+  renderTops();        // top z importu (pokud je nahraný)
   loadSavedImport();   // načti dříve nahraný export, pokud existuje
   if(!window._npTimer) window._npTimer = setInterval(loadNowPlaying, 20000);
 }
@@ -447,18 +456,10 @@ async function loadNowPlaying(){
     <div class="ltext"><div class="ltitle">${esc(t.name)}</div><div class="lsub">${esc(art)}</div></div>`;
 }
 
-async function loadTops(){
-  const [a, t] = await Promise.all([
-    api('/me/top/artists?limit=50&time_range=' + currentRange),
-    api('/me/top/tracks?limit=50&time_range='  + currentRange),
-  ]);
-  const artists = (a?.items)||[], tracks = (t?.items)||[];
-  window._artists = artists; window._tracks = tracks;   // pro sdílecí kartičku
-  renderTop('topArtists', artists, 'artist');
-  renderTop('topTracks',  tracks,  'track');
-  renderTop('prevArtists', artists.slice(0,5), 'artist');
-  renderTop('prevTracks',  tracks.slice(0,5),  'track');
-  renderGenres(artists);
+// Žánry bereme z API (export žánry neobsahuje) – jednorázově za celou dobu
+async function loadApiExtras(){
+  try{ const a = await api('/me/top/artists?limit=50&time_range=long_term'); renderGenres((a?.items)||[]); }
+  catch(e){}
 }
 
 async function loadRecent(){
@@ -491,27 +492,69 @@ function renderTop(id, items, type){
 }
 
 // Přepínač období – synchronizuje všechny chip řádky
+let currentUnit = 'min';
+
 function setRange(r){
   currentRange = r;
   document.querySelectorAll('.rangeChips .chip').forEach(c => c.classList.toggle('active', c.dataset.r===r));
-  if(r === 'import') renderImportTops(); else loadTops();
+  renderTops();
+}
+function setUnit(u){
+  currentUnit = u;
+  document.querySelectorAll('.unitChips .chip').forEach(c => c.classList.toggle('active', c.dataset.u===u));
+  renderTops();
 }
 
-// Top umělci/skladby z NAHRANÉHO exportu (přesná celá historie podle času poslechu)
-function renderImportTops(){
+// Hranice období pro filtrování importu podle data
+function rangeCutoff(r){
+  const now = Date.now();
+  if(r === 'short_term')  return now - 28*86400000;   // 4 týdny
+  if(r === 'medium_term') return now - 182*86400000;  // ~6 měsíců
+  return 0;                                            // celá doba
+}
+// Naformátuje čas podle zvolené jednotky
+function fmtUnit(ms){
+  if(currentUnit === 'min') return Math.round(ms/60000).toLocaleString('cs') + ' min';
+  if(currentUnit === 'h')   return Math.round(ms/3600000).toLocaleString('cs') + ' h';
+  return (ms/86400000).toFixed(1).replace('.',',') + ' dní';
+}
+
+// Top umělci/skladby z NAHRANÉHO exportu, filtrované obdobím
+function renderTops(){
   const recs = window._importRecords;
   const ids = ['topArtists','topTracks','prevArtists','prevTracks'];
   if(!recs || !recs.length){
-    ids.forEach(id => document.getElementById(id).innerHTML = '<span class="muted">Nejdřív nahraj export v záložce „Přesná historie".</span>');
+    ids.forEach(id => { const el=document.getElementById(id); if(el) el.innerHTML = '<span class="muted">Nahraj svůj export v záložce „Přesná historie", ať se ukážou tvoje statistiky.</span>'; });
+    document.querySelectorAll('.streamCount').forEach(el => el.textContent = '');
     return;
   }
-  const s = buildStats(recs);
-  renderRanked('topArtists',  s.topArtists.map(a=>[a.artist, a.ms, a.count]));
-  renderRanked('topTracks',   s.topTracks.map(t=>[`${t.track} — ${t.artist}`, t.ms, t.count]));
-  renderRanked('prevArtists', s.topArtists.slice(0,5).map(a=>[a.artist, a.ms, a.count]));
-  renderRanked('prevTracks',  s.topTracks.slice(0,5).map(t=>[`${t.track} — ${t.artist}`, t.ms, t.count]));
+  const filtered = recs.filter(r => r.date.getTime() >= rangeCutoff(currentRange));
+  if(!filtered.length){
+    ids.forEach(id => { const el=document.getElementById(id); if(el) el.innerHTML = '<span class="muted">V tomto období nejsou žádná data.</span>'; });
+    document.querySelectorAll('.streamCount').forEach(el => el.textContent = '0 streamů');
+    return;
+  }
+  const s = buildStats(filtered);
+  document.querySelectorAll('.streamCount').forEach(el => el.textContent = s.totalStreams.toLocaleString('cs') + ' streamů');
+  window._cardArtists = s.topArtists.slice(0,5).map(a => a.artist);
+  window._cardTracks  = s.topTracks.slice(0,5).map(t => t.track);
+  renderTimeRanked('topArtists',  s.topArtists.map(a=>[a.artist, a.ms, a.count]));
+  renderTimeRanked('topTracks',   s.topTracks.map(t=>[`${t.track} — ${t.artist}`, t.ms, t.count]));
+  renderTimeRanked('prevArtists', s.topArtists.slice(0,5).map(a=>[a.artist, a.ms, a.count]));
+  renderTimeRanked('prevTracks',  s.topTracks.slice(0,5).map(t=>[`${t.track} — ${t.artist}`, t.ms, t.count]));
+}
+
+// Žebříček s časem (v aktuální jednotce) + počtem streamů (vždy)
+function renderTimeRanked(id, rows){
+  const max = rows.length ? rows[0][1] : 1;
+  document.getElementById(id).innerHTML = rows.map(([label,ms,count],i)=>`
+    <div class="row" style="animation-delay:${(Math.min(i,18)*0.04).toFixed(2)}s"><div class="rank">${i+1}</div><div class="bar-wrap">
+      <div class="bar-label"><span class="name">${esc(label)}</span><span class="val">${fmtUnit(ms)} · ${count.toLocaleString('cs')}×</span></div>
+      <div class="bar"><div class="bar-fill" style="width:${(ms/max*100).toFixed(1)}%"></div></div>
+    </div></div>`).join('');
 }
 document.addEventListener('click', e => { const c = e.target.closest('.rangeChips .chip'); if(c) setRange(c.dataset.r); });
+document.addEventListener('click', e => { const u = e.target.closest('.unitChips .chip'); if(u) setUnit(u.dataset.u); });
 
 // Klik na řádek otevře skladbu/umělce ve Spotify
 document.addEventListener('click', e => {
@@ -537,9 +580,9 @@ function renderGenres(artists){
 // Sdílecí kartička (PNG ke stažení) z aktuálního top 5
 function clip(s,n){ return s.length>n ? s.slice(0,n-1)+'…' : s; }
 function generateShareCard(){
-  const artists = (window._artists||[]).slice(0,5);
-  const tracks  = (window._tracks||[]).slice(0,5);
-  if(!artists.length && !tracks.length){ alert('Počkej, až se načtou data.'); return; }
+  const artists = window._cardArtists || [];
+  const tracks  = window._cardTracks  || [];
+  if(!artists.length && !tracks.length){ alert('Nejdřív nahraj export (záložka Přesná historie).'); return; }
   const W=1080, H=1920, c=document.createElement('canvas'); c.width=W; c.height=H;
   const x=c.getContext('2d');
   const g=x.createLinearGradient(0,0,W,H);
@@ -553,10 +596,10 @@ function generateShareCard(){
   x.fillStyle='#aab3c0'; x.font='400 36px Segoe UI, Arial, sans-serif'; x.fillText(rl, 82, 312);
   let y=440;
   x.fillStyle='#1ed760'; x.font='700 40px Segoe UI, Arial'; x.fillText('Umělci', 80, y); y+=78;
-  artists.forEach((a,i)=>{ x.font='600 46px Segoe UI, Arial'; x.fillStyle='#1ed760'; x.fillText((i+1)+'.', 80, y); x.fillStyle='#fff'; x.fillText(clip(a.name,24), 168, y); y+=70; });
+  artists.forEach((a,i)=>{ x.font='600 46px Segoe UI, Arial'; x.fillStyle='#1ed760'; x.fillText((i+1)+'.', 80, y); x.fillStyle='#fff'; x.fillText(clip(a,24), 168, y); y+=70; });
   y+=46;
   x.fillStyle='#1ed760'; x.font='700 40px Segoe UI, Arial'; x.fillText('Skladby', 80, y); y+=78;
-  tracks.forEach((t,i)=>{ x.font='600 42px Segoe UI, Arial'; x.fillStyle='#1ed760'; x.fillText((i+1)+'.', 80, y); x.fillStyle='#fff'; x.fillText(clip(t.name,26), 168, y); y+=64; });
+  tracks.forEach((t,i)=>{ x.font='600 42px Segoe UI, Arial'; x.fillStyle='#1ed760'; x.fillText((i+1)+'.', 80, y); x.fillStyle='#fff'; x.fillText(clip(t,26), 168, y); y+=64; });
   x.fillStyle='#8b94a3'; x.font='400 30px Segoe UI, Arial'; x.fillText('vygenerováno mojí Spotify statistikou', 80, H-100);
   const a=document.createElement('a'); a.download='spotify-top.png'; a.href=c.toDataURL('image/png'); a.click();
 }
@@ -588,6 +631,7 @@ async function handleFiles(fileList){
   catch(err){ console.warn('Uložení do databáze selhalo', err); }
   renderImport(buildStats(records));
   showImportMeta(records.length, Date.now());
+  renderTops();
 }
 function normalize(r){
   const ms = r.ms_played ?? r.msPlayed ?? 0; if(ms <= 0) return null;
@@ -673,6 +717,7 @@ async function loadSavedImport(){
       window._importRecords = records;
       renderImport(buildStats(records));
       showImportMeta(records.length, await idbGet('importedAt'));
+      renderTops();
     }
   }catch(err){ console.warn('Načtení uloženého importu selhalo', err); }
 }
