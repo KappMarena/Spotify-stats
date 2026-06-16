@@ -7,37 +7,42 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0a0d16">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
   /* ====== Základ ====== */
   :root{
-    --text:#ffffff; --muted:#d6dce6;
-    --panel:rgba(255,255,255,.07);        /* průhledné frosted sklo */
-    --panel-strong:rgba(255,255,255,.05); /* sidebar / lišta */
-    --tile:rgba(255,255,255,.08);         /* vnitřní dlaždice */
-    --brd:rgba(255,255,255,.16);
-    --green:#1ed760; --cyan:#22d3ee;
-    --accent:linear-gradient(135deg,#1ed760,#22d3ee);
-    --radius:14px;
+    --text:#f6f8fc; --muted:#a7afc6;
+    --panel:rgba(255,255,255,.055);        /* průhledné frosted sklo */
+    --panel-strong:rgba(18,18,38,.55);     /* sidebar / lišta – tmavší pro kontrast */
+    --tile:rgba(255,255,255,.06);          /* vnitřní dlaždice */
+    --brd:rgba(255,255,255,.12);
+    --green:#22c55e; --cyan:#4ade80;
+    --indigo:#4338ca;
+    --accent:linear-gradient(135deg,#34d399,#22c55e);
+    --radius:16px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%;}
   body{
     color:var(--text); overflow:hidden;
-    font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;
+    font-family:'Inter','Segoe UI',system-ui,-apple-system,Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased; letter-spacing:-0.01em;
     text-shadow:0 1px 2px rgba(0,0,0,.30);
     background:
-      radial-gradient(900px 620px at 50% 118%, rgba(34,211,238,.28), transparent 60%),
-      #0a0d16;
+      radial-gradient(1000px 700px at 50% 120%, rgba(67,56,202,.20), transparent 60%),
+      #0a0a16;
   }
   /* barevné plovoucí "blobs" – prosvítají skrz sklo */
   body::before, body::after{
     content:''; position:fixed; border-radius:50%; filter:blur(90px); z-index:-2; pointer-events:none;
   }
   body::before{ width:62vmax; height:62vmax; top:-18vmax; left:-14vmax;
-    background:radial-gradient(circle, rgba(29,185,84,.55), transparent 70%);
+    background:radial-gradient(circle, rgba(34,197,94,.45), transparent 70%);
     animation:floatA 22s ease-in-out infinite; }
   body::after{ width:58vmax; height:58vmax; bottom:-20vmax; right:-14vmax;
-    background:radial-gradient(circle, rgba(124,58,237,.50), transparent 70%);
+    background:radial-gradient(circle, rgba(67,56,202,.50), transparent 70%);
     animation:floatB 27s ease-in-out infinite; }
   @keyframes floatA{ 50%{ transform:translate(10vmax,8vmax) scale(1.15); } }
   @keyframes floatB{ 50%{ transform:translate(-8vmax,-10vmax) scale(1.10); } }
@@ -54,6 +59,10 @@
     100% { transform:scale(1.45) translate(-3%,-3%); }
   }
   .hidden{ display:none !important; }
+  :focus-visible{ outline:2px solid var(--green); outline-offset:2px; border-radius:4px; }
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
+  }
 
   /* dialog pro sdílecí kartu */
   #shareModal{ position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
@@ -101,11 +110,15 @@
   .sidebar{ grid-area:sidebar; background:var(--panel-strong); border:1px solid var(--brd); border-radius:var(--radius);
     -webkit-backdrop-filter:blur(34px) saturate(180%); backdrop-filter:blur(34px) saturate(180%);
     padding:16px 12px; display:flex; flex-direction:column; gap:4px; overflow:auto; }
-  .brand{ font-weight:800; font-size:16px; padding:6px 12px 16px; }
-  .navlink{ display:flex; align-items:center; padding:11px 14px; border-radius:10px; color:var(--muted);
-    cursor:pointer; font-weight:600; font-size:14px; transition:.12s; white-space:nowrap; }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:800; font-size:16px; padding:6px 12px 18px; letter-spacing:-0.02em; }
+  .brand-dot{ width:22px; height:22px; border-radius:7px; background:var(--accent); flex:none; box-shadow:0 2px 10px rgba(34,197,94,.5); }
+  .navlink{ display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:10px; color:var(--muted);
+    cursor:pointer; font-weight:600; font-size:14px; transition:background .15s, color .15s; white-space:nowrap; position:relative; }
+  .navlink svg{ width:19px; height:19px; flex:none; stroke-width:2; }
   .navlink:hover{ color:#fff; background:rgba(255,255,255,.06); }
-  .navlink.active{ color:#fff; background:rgba(255,255,255,.12); }
+  .navlink.active{ color:#fff; background:rgba(34,197,94,.14); }
+  .navlink.active::before{ content:''; position:absolute; left:0; top:9px; bottom:9px; width:3px; border-radius:3px; background:var(--green); }
+  .navlink.active svg{ color:var(--green); }
   .sidebar-spacer{ flex:1; min-height:10px; }
   .user{ font-size:12px; color:var(--muted); padding:6px 14px; }
 
@@ -135,7 +148,7 @@
   .lrow:hover{ background:rgba(255,255,255,.05); border-radius:9px; }
   .lrow[data-url]{ cursor:pointer; }
   .lrow img{ width:46px; height:46px; border-radius:7px; object-fit:cover; background:#22262e; flex:none; box-shadow:0 3px 10px rgba(0,0,0,.4); }
-  .noimg{ width:46px; height:46px; border-radius:7px; flex:none; display:flex; align-items:center; justify-content:center; font-weight:800; color:#04240f; background:linear-gradient(135deg,#1ed760,#22d3ee); box-shadow:0 3px 10px rgba(0,0,0,.4); }
+  .noimg{ width:46px; height:46px; border-radius:7px; flex:none; display:flex; align-items:center; justify-content:center; font-weight:800; color:#04240f; background:linear-gradient(135deg,#34d399,#22c55e); box-shadow:0 3px 10px rgba(0,0,0,.4); }
   .recapSel{ background:var(--tile); color:var(--text); border:1px solid var(--brd); border-radius:18px; padding:9px 16px; font-size:14px; cursor:pointer; }
   .recapSel option{ color:#000; }
   .rank{ width:26px; text-align:center; font-weight:800; color:var(--muted); font-variant-numeric:tabular-nums; flex:none; }
@@ -223,17 +236,17 @@
 
     <!-- Sidebar -->
     <nav class="sidebar">
-      <div class="brand">Spotify statistiky</div>
-      <div class="navlink active" data-nav="prehled">Přehled</div>
-      <div class="navlink" data-nav="artists">Top umělci</div>
-      <div class="navlink" data-nav="tracks">Top skladby</div>
-      <div class="navlink" data-nav="genres">Žánry</div>
-      <div class="navlink" data-nav="recaps">Recapy</div>
-      <div class="navlink" data-nav="recent">Naposledy přehrané</div>
-      <div class="navlink" data-nav="import">Přesná historie</div>
+      <div class="brand"><span class="brand-dot"></span>Spotify statistiky</div>
+      <div class="navlink active" data-nav="prehled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>Přehled</div>
+      <div class="navlink" data-nav="artists"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Top umělci</div>
+      <div class="navlink" data-nav="tracks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Top skladby</div>
+      <div class="navlink" data-nav="genres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>Žánry</div>
+      <div class="navlink" data-nav="recaps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>Recapy</div>
+      <div class="navlink" data-nav="recent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Naposledy přehrané</div>
+      <div class="navlink" data-nav="import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>Přesná historie</div>
       <div class="sidebar-spacer"></div>
       <div class="user">Přihlášen: <span id="userName">…</span></div>
-      <div class="navlink" data-action="logout">Odhlásit</div>
+      <div class="navlink" data-action="logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>Odhlásit</div>
     </nav>
 
     <!-- Hlavní obsah -->
